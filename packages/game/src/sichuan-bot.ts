@@ -5,7 +5,7 @@
 import { effectiveTiles, shanten, SUITED_KINDS } from "./hand.js";
 import { canTsumo, discardable, fewestSuit, kongOptions, pickSwapTiles } from "./sichuan.js";
 import { countTiles, kindOf, rankOf, suitOfKind, suitOfTile, type Tile } from "./tiles.js";
-import type { GameCommand, SichuanState } from "./types.js";
+import type { SichuanCommand, SichuanState } from "./types.js";
 
 const OPTIONS = { sevenPairs: "four-as-two" as const };
 
@@ -64,7 +64,7 @@ function bestDiscard(state: SichuanState, seat: number, options: readonly Tile[]
   return best!;
 }
 
-export function sichuanBotCommand(state: SichuanState, seat: number): GameCommand {
+export function sichuanBotCommand(state: SichuanState, seat: number): SichuanCommand {
   const player = state.players[seat]!;
   switch (state.stage) {
     case "swap":

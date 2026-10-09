@@ -28,6 +28,22 @@ export {
   stackSichuanHand,
 } from "./sichuan.js";
 export { cappedFan, evaluateHu, tingInfo } from "./sichuan-score.js";
+export {
+  canKyuushu,
+  canTsumo as riichiCanTsumo,
+  createRiichi,
+  DEFAULT_RIICHI_OPTIONS,
+  rankSeats,
+  riichiConfig,
+  riichiDiscardable,
+  riichiKanOptions,
+  riichiOptions,
+  roundLabel,
+  seatWindOf,
+  stackRiichiHand,
+} from "./riichi.js";
+export { basePoints, doraOf, isMenzen, isWinShape, payments, riichiWaits, scoreRiichiHand } from "./riichi-score.js";
+export type { RiichiHandInput, RiichiScore } from "./riichi-score.js";
 export type { HuResult, HuSituation, TingInfo } from "./sichuan-score.js";
 export {
   applyCommand,
@@ -36,6 +52,7 @@ export {
   createGame,
   legalCommands,
   pendingSeats,
+  scoreOf,
   redactGameForViewer,
   resolveClaim,
   stepSeconds,

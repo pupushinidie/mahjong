@@ -4,7 +4,7 @@ import { kindOf, parseKinds, parseTiles, type Tile } from "./tiles.js";
 import type { RiichiMeld } from "./riichi-types.js";
 
 /** 手牌（含和的那张）+ 副露 → 算分输入。 */
-function hand(text: string, win: string, extra: Partial<RiichiHandInput> & { melds?: { type: RiichiMeld["type"]; tiles: string }[] } = {}): RiichiHandInput {
+function hand(text: string, win: string, extra: Partial<Omit<RiichiHandInput, "melds">> & { melds?: { type: RiichiMeld["type"]; tiles: string }[] } = {}): RiichiHandInput {
   const used = new Set<Tile>();
   const melds: RiichiMeld[] = (extra.melds ?? []).map((meld) => ({ type: meld.type, tiles: parseTiles(meld.tiles, used) }));
   const concealed = parseTiles(`${text} ${win}`, used);

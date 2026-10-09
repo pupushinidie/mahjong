@@ -5,9 +5,9 @@ import type { GameCommand, GameState, Variant } from "./types.js";
 export const SEAT_COUNT = 4;
 
 /** 系列里的玩法；ready 为 false 的在选玩法页显示「制作中」。 */
-export const VARIANTS: readonly { readonly id: Variant | "riichi"; readonly name: string; readonly ready: boolean }[] = [
+export const VARIANTS: readonly { readonly id: Variant; readonly name: string; readonly ready: boolean }[] = [
 	{ id: "sichuan", name: "四川麻将", ready: true },
-	{ id: "riichi", name: "立直麻将", ready: false },
+	{ id: "riichi", name: "立直麻将", ready: true },
 ];
 
 export interface LobbyMember {

@@ -1,11 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { createRng } from "./rng.js";
-import { applyCommand, botCommand, claimReady, pendingSeats, redactGameForViewer, resolveClaim, timeoutTurn } from "./engine.js";
+import * as engine from "./engine.js";
 import { decompositions, shanten, standardShanten } from "./hand.js";
 import { canTsumo, createSichuan, discardable, kongOptions, SICHUAN_TILES } from "./sichuan.js";
 import { evaluateHu, tingInfo } from "./sichuan-score.js";
 import { countKinds, kindOf, parseKinds, parseTiles, suitOfTile, SUITS, type Suit, type Tile } from "./tiles.js";
-import type { GameCommand, Meld, SichuanOptions, SichuanState } from "./types.js";
+import type { SichuanCommand, Meld, SichuanOptions, SichuanState } from "./types.js";
+
+// 统一入口返回的是两种玩法的联合类型；这里只测四川，收窄一下。
+const applyCommand = (state: SichuanState, id: string, command: SichuanCommand) => engine.applyCommand(state, id, command) as SichuanState;
+const resolveClaim = (state: SichuanState) => engine.resolveClaim(state) as SichuanState;
+const timeoutTurn = (state: SichuanState) => engine.timeoutTurn(state) as SichuanState;
+const redactGameForViewer = (state: SichuanState, id: string) => engine.redactGameForViewer(state, id) as SichuanState;
+const botCommand = (state: SichuanState, seat: number) => engine.botCommand(state, seat) as SichuanCommand;
+const { claimReady, pendingSeats } = engine;
 
 const PLAYERS = [
   { id: "A", name: "甲" },
@@ -86,7 +94,7 @@ const tileIn = (state: SichuanState, seat: number, code: string) => {
   if (tile === undefined) throw new Error(`${IDS[seat]} 手里没有 ${code}`);
   return tile;
 };
-const run = (state: SichuanState, seat: number, command: GameCommand) => applyCommand(state, IDS[seat]!, command);
+const run = (state: SichuanState, seat: number, command: SichuanCommand) => applyCommand(state, IDS[seat]!, command);
 const discard = (state: SichuanState, seat: number, code: string) => run(state, seat, { type: "DISCARD", tile: tileIn(state, seat, code) });
 const scores = (state: SichuanState) => state.players.map((player) => player.score);
 
@@ -484,7 +492,7 @@ function totalTiles(state: SichuanState): number {
   return count;
 }
 
-function randomCommand(state: SichuanState, seat: number, rng: ReturnType<typeof createRng>): GameCommand {
+function randomCommand(state: SichuanState, seat: number, rng: ReturnType<typeof createRng>): SichuanCommand {
   if (state.stage === "turn") {
     if (canTsumo(state, seat) && rng.next() < 0.7) return { type: "TSUMO" };
     const kongs = kongOptions(state, seat);

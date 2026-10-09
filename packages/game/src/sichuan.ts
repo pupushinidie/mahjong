@@ -10,8 +10,8 @@ import { countTiles, kindOf, rankOf, sortTiles, suitOfTile, SUITS, type Suit, ty
 import type {
   ClaimAction,
   ClaimWindow,
-  GameCommand,
-  GameEvent,
+  SichuanCommand,
+  SichuanEvent,
   HandSummary,
   Meld,
   SettleLine,
@@ -49,7 +49,7 @@ export interface NewPlayer {
 interface Ctx {
   readonly state: SichuanState;
   readonly rng: Rng;
-  readonly events: GameEvent[];
+  readonly events: SichuanEvent[];
 }
 
 const SEATS = [0, 1, 2, 3] as const;
@@ -328,7 +328,7 @@ export function stackSichuanHand(state: SichuanState, wall: Tile[], overrides: P
 // ---------------------------------------------------------------------------
 // 动作
 
-export function applySichuan(input: SichuanState, playerId: string, command: GameCommand | { type: "RESOLVE" } | { type: "TIMEOUT" }): { state: SichuanState; events: GameEvent[] } {
+export function applySichuan(input: SichuanState, playerId: string, command: SichuanCommand | { type: "RESOLVE" } | { type: "TIMEOUT" }): { state: SichuanState; events: SichuanEvent[] } {
   if (input.phase === "finished" && command.type !== "AUTO") fail("对局已经结束。");
   const state = structuredClone(input);
   delete (state as { events?: unknown }).events;
@@ -365,7 +365,7 @@ function setAuto(ctx: Ctx, seat: number, on: boolean): void {
   ctx.events.push({ type: "AutoChanged", seat, on });
 }
 
-function act(ctx: Ctx, seat: number, command: GameCommand): void {
+function act(ctx: Ctx, seat: number, command: SichuanCommand): void {
   const { state } = ctx;
   switch (command.type) {
     case "SWAP":
@@ -805,7 +805,7 @@ function nextHand(ctx: Ctx): void {
 // 超时（规则书 9.4）
 
 /** 超时的默认动作：换三张按机器人、定缺选最少的一门、能和就和、有缺门打缺门（离 5 最远）否则摸切、碰杠一律过。 */
-export function timeoutCommand(state: SichuanState, seat: number): GameCommand {
+export function timeoutCommand(state: SichuanState, seat: number): SichuanCommand {
   const player = state.players[seat]!;
   switch (state.stage) {
     case "swap":
@@ -929,7 +929,7 @@ export function redactSichuan(state: SichuanState, viewerId: string): SichuanSta
     view.claim.pending = own && response === undefined ? 1 : 0;
   }
   // 别人的暗杠：一盘结束前事件里也不给牌面。
-  const hideKong = (event: GameEvent): GameEvent =>
+  const hideKong = (event: SichuanEvent): SichuanEvent =>
     event.type === "Kong" && event.kongType === "concealedKong" && event.seat !== viewer && !showAll ? { ...event, tile: -1 } : event;
   view.events = view.events.map(hideKong);
   view.history = view.history.map(hideKong);

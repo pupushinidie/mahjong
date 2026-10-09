@@ -2,9 +2,10 @@
  * 麻将系列的对局状态。每种玩法一个 state 类型，用 variant 区分；现在有四川麻将（sichuan），立直麻将之后加。
  * 座位 0–3 按逆时针（出牌顺序）排列：i 的下家是 i+1，对家是 i+2，上家是 i+3。
  */
+import type { RiichiCommand, RiichiEvent, RiichiState } from "./riichi-types.js";
 import type { Suit, Tile } from "./tiles.js";
 
-export type Variant = "sichuan";
+export type Variant = "sichuan" | "riichi";
 
 export interface SichuanOptions {
   /** 血战到底（和了下桌）/ 血流成河（和了接着打）。 */
@@ -146,7 +147,7 @@ export interface HandSummary {
   readonly nextDealer: number;
 }
 
-export type GameCommand =
+export type SichuanCommand =
   /** 换三张：3 张同一门。 */
   | { readonly type: "SWAP"; readonly tiles: readonly Tile[] }
   | { readonly type: "VOID"; readonly suit: Suit }
@@ -162,7 +163,7 @@ export type GameCommand =
   /** 托管开关。 */
   | { readonly type: "AUTO"; readonly on: boolean };
 
-export type GameEvent =
+export type SichuanEvent =
   | { readonly type: "HandStarted"; readonly handNo: number; readonly dealer: number }
   | { readonly type: "Swapped"; readonly direction: "next" | "prev" | "across" }
   | { readonly type: "VoidsRevealed"; readonly voids: (Suit | null)[] }
@@ -223,8 +224,8 @@ export interface SichuanState {
   summary: HandSummary | null;
   /** 结算画面里点了「下一盘」的玩家 id。 */
   ready: string[];
-  events: GameEvent[];
-  history: GameEvent[];
+  events: SichuanEvent[];
+  history: SichuanEvent[];
   finalResult?: FinalResult;
   version: number;
   /** 每到一个新的决定点（换阶段、轮到下一个人、开抢牌窗口）+1；服务端据此重置计时。 */
@@ -233,7 +234,10 @@ export interface SichuanState {
   wall?: Tile[];
   rng?: number;
   seed?: number;
-  log?: { seat: number; command: GameCommand | { type: "TIMEOUT" } | { type: "RESOLVE" } }[];
+  log?: { seat: number; command: SichuanCommand | { type: "TIMEOUT" } | { type: "RESOLVE" } }[];
 }
 
-export type GameState = SichuanState;
+export type GameState = SichuanState | RiichiState;
+export type GameCommand = SichuanCommand | RiichiCommand;
+export type GameEvent = SichuanEvent | RiichiEvent;
+export type * from "./riichi-types.js";
