@@ -1,0 +1,9 @@
+{"time": "2026-10-08 21:38:21", "name": "teahouse-night-s31", "endpoint": "/create-image-pixen", "usage": {"type": "usd", "usd": 0.009554544581307306}, "seconds": 47.4}
+{"time": "2026-10-08 21:39:22", "name": "teahouse-night-s32", "endpoint": "/create-image-pixen", "usage": {"type": "usd", "usd": 0.009483588960435656}, "seconds": 61.3}
+{"time": "2026-10-08 21:40:30", "name": "teahouse-night-s33", "endpoint": "/create-image-pixen", "usage": {"type": "usd", "usd": 0.009925904538896349}, "seconds": 67.4}
+{"time": "2026-10-08 21:41:45", "name": "teahouse-night-s34", "endpoint": "/create-image-pixen", "usage": {"type": "usd", "usd": 0.01030794170167711}, "seconds": 75.3}
+{"time": "2026-10-08 21:42:36", "name": "teahouse-day-s41", "endpoint": "/create-image-pixen", "usage": {"type": "usd", "usd": 0.009814933141072592}, "seconds": 51.2}
+{"time": "2026-10-08 21:43:45", "name": "teahouse-day-s42", "endpoint": "/create-image-pixen", "usage": {"type": "usd", "usd": 0.009992867946624757}, "seconds": 68.8}
+{"time": "2026-10-08 21:45:08", "name": "teahouse-day-s43", "endpoint": "/create-image-pixen", "usage": {"type": "usd", "usd": 0.011690451330608791}, "seconds": 82.8}
+{"time": "2026-10-08 21:46:22", "name": "teahouse-day-s44", "endpoint": "/create-image-pixen", "usage": {"type": "usd", "usd": 0.010186618910895454}, "seconds": 73.7}
+{"time": "2026-10-08 21:49:48", "name": "avatar", "endpoint": "/generate-image-v2", "usage": {"type": "generations", "generations": 10.0}, "seconds": 206.5, "status": "completed"}

@@ -428,6 +428,32 @@ describe("四川麻将规则书第 10 节", () => {
   });
 });
 
+describe("隐藏信息", () => {
+  it("别人的暗杠在事件里也不给牌面；抢牌窗口不给别人的选项和待回应人数", () => {
+    let state = build({
+      hands: ["2468m 2468s 13579s", "5555p 1m 3m 7m 9m 1p 3p 7p 9p 2m 8m", "111m 999m 222p 33p 44p", "123s 456s 789s 6789p"],
+      voids: ["p", "s", "s", "m"],
+      turn: B,
+      wallTail: "6m",
+    });
+    state = run(state, B, { type: "KONG", tile: tileIn(state, B, "5p") });
+    const forA = redactGameForViewer(state, "A");
+    const kongEvent = [...forA.events, ...forA.history].find((event) => event.type === "Kong");
+    expect(kongEvent && kongEvent.type === "Kong" ? kongEvent.tile : 0).toBe(-1);
+    expect(forA.players[B]!.melds[0]!.tiles).toEqual([-1, -1, -1, -1]);
+    const forB = redactGameForViewer(state, "B");
+    const ownKong = forB.events.find((event) => event.type === "Kong");
+    expect(ownKong && ownKong.type === "Kong" ? ownKong.tile : -1).toBeGreaterThanOrEqual(0);
+    // C 能碰 B 打出的三筒：A 看不到 C 的选项，也看不到「还有 1 人没回应」
+    state = discard(state, B, "3p");
+    expect(state.claim!.options[C]).toContain("pung");
+    const claimForA = redactGameForViewer(state, "A").claim!;
+    expect(claimForA.options).toEqual({});
+    expect(claimForA.pending).toBe(0);
+    expect(redactGameForViewer(state, "C").claim!.pending).toBe(1);
+  });
+});
+
 describe("算番补充", () => {
   it("带幺九、断幺九、对对胡", () => {
     const yaojiu = evaluateHu(parseKinds("123m 789m 111p 999p 11m"), [], "s", { how: "ron" }, { zimo: "fan", cap: null })!;

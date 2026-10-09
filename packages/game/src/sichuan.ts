@@ -925,6 +925,13 @@ export function redactSichuan(state: SichuanState, viewerId: string): SichuanSta
     const response = view.claim.responses[viewer];
     view.claim.options = own ? { [viewer]: own } : {};
     view.claim.responses = response !== undefined ? { [viewer]: response } : {};
+    // 还有几人没回应也不能给：会暴露别人能不能碰、能不能和。
+    view.claim.pending = own && response === undefined ? 1 : 0;
   }
+  // 别人的暗杠：一盘结束前事件里也不给牌面。
+  const hideKong = (event: GameEvent): GameEvent =>
+    event.type === "Kong" && event.kongType === "concealedKong" && event.seat !== viewer && !showAll ? { ...event, tile: -1 } : event;
+  view.events = view.events.map(hideKong);
+  view.history = view.history.map(hideKong);
   return view;
 }
