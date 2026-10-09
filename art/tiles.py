@@ -4,7 +4,7 @@
 - 每张牌 20×32 像素：牌面 18×26（含高光），下面 4 像素是牌身的厚度（露出牌背颜色），外面 1 像素描边。
 - 顺序：0–33 按牌种（万 0–8、筒 9–17、条 18–26、东南西北白发中 27–33），34–36 是红五（五万、五筒、五索），
   37 是牌背（别人手里立着的牌、暗杠）。
-- 万字用 Fusion Pixel 12px 写（字要准，不让模型写字）；筒的圆点、条的竹节按格子画。一条的小鸟先用代码画，美术轮再换。
+- 牌面上的字用繁体（萬、東、發），Fusion Pixel 12px 写（字要准，不让模型写字）；筒的圆点、条的竹节按格子画。一条的小鸟先用代码画，美术轮再换。
 
 用法：python art/tiles.py  →  public/art/tiles.png 和 art/out/tiles-preview.png（放大 4 倍的预览）
 """
@@ -234,14 +234,14 @@ def sou(rank: int, red=False) -> Image.Image:
 def man(rank: int, red=False) -> Image.Image:
     img = blank()
     text(img, NUMERALS[rank - 1], 2, RED if red else INK)
-    text(img, "万", 14, RED)
+    text(img, "萬", 14, RED)
     return img
 
 
 def honor(index: int) -> Image.Image:
     img = blank()
     if index < 4:
-        text(img, "东南西北"[index], 8, INK)
+        text(img, "東南西北"[index], 8, INK)
     elif index == 4:  # 白：蓝色方框
         px = img.load()
         for y in range(5, 23):
@@ -251,7 +251,7 @@ def honor(index: int) -> Image.Image:
                 elif y in (7, 20) or x in (6, 13):
                     px[x, y] = (150, 180, 220, 255)
     elif index == 5:
-        text(img, "发", 8, GREEN)
+        text(img, "發", 8, GREEN)
     else:
         text(img, "中", 8, RED)
     return img

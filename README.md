@@ -16,7 +16,7 @@ npm workspaces 单仓库：
 - `apps/server`：Socket.IO 房间服务器。始终 4 个座位，1–4 个真人，**开局时空座由机器人补满**；机器人、托管、离线的人都由服务器按 0.5–1.5 秒的节奏代打（`botCommand`）。每张弃牌后抢牌窗口至少开 0.8 秒再结算（所有人都一样，看不出谁能碰能胡）。
 - `apps/web`：Vite + React。首页选玩法 → 等候房间（房主改开房选项）→ 牌桌（`GameBoard.tsx`，样式 `mahjong.css`）。
 - `scripts/test-bot.mjs`：模拟真人连进房间的陪玩脚本（用法见文件开头）。
-- `art/`：`tiles.py` 用代码画牌面图集（万字用像素字体写），`r1.py` PixelLab 出场景和头像候选，`export.py` 按 `selection.json` 导出，`ledger.jsonl` 记账。
+- `art/`：`tiles.py` 用代码画牌面图集（牌面字用繁体像素字体写），`r1.py` PixelLab 出场景和头像候选，`export.py` 按 `selection.json` 导出，`ledger.jsonl` 记账。
 
 常用命令：`npm run dev`（服务 3012、网页 5185）、`npm test`、`npm run typecheck`、`BASE_PATH=/mahjong/ npm run build`。
 
@@ -62,7 +62,7 @@ npm workspaces 单仓库：
 
 ## 美术
 
-- 牌面：代码画的像素牌（`art/tiles.py`，20×32，牌面 + 4 像素牌身厚度；万字是 Fusion Pixel 12px），只按整数倍显示。一条的小鸟是代码画的。字牌、红五也已经画好，给立直用。
+- 牌面：代码画的像素牌（`art/tiles.py`，20×32，牌面 + 4 像素牌身厚度）。牌面上的字用繁体（萬、東、發，他 2026-10-09 定的），Fusion Pixel 12px 写，只按整数倍显示。一条的小鸟是代码画的。字牌、红五也已经画好，给立直用。
 - 场景（PixelLab pixen 512×288）：夜间 `teahouse-night-s32`（灯笼茶馆）、白天 `teahouse-day-s42`（竹帘阳光），做牌桌背景和首页主图。
 - 头像（PixelLab generate-image-v2，64 选 4）：13、0、38、21。
 - **美术是我挑的，他还没看**；候选图在 `art/out/r1/`（场景对比图 `art/out/r1-scenes.png`、头像 `art/out/r1-avatars.png`）。
