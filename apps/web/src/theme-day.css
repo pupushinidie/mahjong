@@ -1,0 +1,17 @@
+/*
+ * 白天版手调的部分。大部分白天样式由 day-theme.ts 从 app-pixel.css、lucky.css 换色生成，
+ * 这里只放机械换色不合适的地方；选择器都以 :root[data-theme="day"] 开头。
+ */
+:root[data-theme="day"] { color-scheme: light; }
+:root[data-theme="day"] .app-shell * { scrollbar-color: #aebad0 var(--bg); }
+
+
+/* 牌桌（木桌、绿呢）白天也保持原色；桌上的深色小牌子（名牌、听牌提示、操作条、状态条）里的字用夜间的浅色 */
+:root[data-theme="day"] :is(.mj-plate, .mj-status-mini, .mj-ting, .mj-actions, .mj-auto-banner, .mj-chip) {
+  --text: #eef3fb;
+  --muted: #93a3bd;
+  --gold: #f0c050;
+  --ok: #62c97a;
+  --bad: #f25c5c;
+}
+:root[data-theme="day"] .mj-plate.active { background: #3a2c10; }
