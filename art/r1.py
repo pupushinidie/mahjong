@@ -36,6 +36,12 @@ SCENES.update({
         "warm paper lanterns and a glowing neon sign window, wooden walls, shoji screens, tatami corner, quiet and cozy, no people, no text, wide view",
         (61, 62, 63, 64),
     ),
+    "jansou-night2": (
+        "interior of a cozy Japanese mahjong parlor at night, several square automatic mahjong tables with green felt, "
+        "warm round paper lanterns hanging from wooden beams, dark wooden walls, shoji screens glowing softly, a potted plant, "
+        "a window showing a dark blue night street, plain walls with no signs and no posters, no neon, no writing, no people, wide view",
+        (81, 82, 83, 84),
+    ),
     "jansou-day": (
         "interior of a bright Japanese mahjong parlor on a sunny afternoon, sunlight through shoji paper screens, "
         "square automatic mahjong tables with green felt, wooden floor, potted bonsai plant, a small tea set, calm and airy, no people, no text, wide view",

@@ -28,6 +28,12 @@ def main() -> None:
     for seat, index in enumerate(selection["avatars"]):
         name = "avatar.png" if index == 0 else f"avatar-{index}.png"
         trim_avatar(R1 / "avatar" / name, OUT / f"avatar-{seat}.png")
+    # 立直麻将：日式雀庄
+    for key, target in (("riichi-night", "riichi-night"), ("riichi-day", "riichi-day")):
+        shutil.copyfile(R1 / f"{selection[key]}.png", OUT / f"{target}.png")
+    for seat, index in enumerate(selection["riichi-avatars"]):
+        name = "avatar-jp.png" if index == 0 else f"avatar-jp-{index}.png"
+        trim_avatar(R1 / "avatar-jp" / name, OUT / f"riichi-avatar-{seat}.png")
     print("exported to", OUT)
 
 

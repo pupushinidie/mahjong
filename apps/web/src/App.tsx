@@ -325,7 +325,7 @@ function App() {
               </button>
             ))}
           </div>
-          <div className="mj-hero" style={{ backgroundImage: `url(${theme === "day" ? art.sceneDay : art.sceneNight})` }}>
+          <div className="mj-hero" style={{ backgroundImage: `url(${variant === "riichi" ? (theme === "day" ? art.riichiDay : art.riichiNight) : theme === "day" ? art.sceneDay : art.sceneNight})` }}>
             <div className="mj-showcase" aria-hidden="true">
               {SHOWCASE.map((tile) => <TileView key={tile} tile={tile} scale={2} />)}
             </div>
@@ -590,7 +590,7 @@ function RoomView({
               {room.members.map((member, index) => (
                 <div className="player-row" key={member.id}>
                   <div className="player-avatar mj-member-avatar" style={{ background: seatColor(index) } as CSSProperties}>
-                    <img src={art.avatar(index)} alt="" onError={(event) => { event.currentTarget.style.display = "none"; }} />
+                    <img src={room.options.variant === "riichi" ? art.riichiAvatar(index) : art.avatar(index)} alt="" onError={(event) => { event.currentTarget.style.display = "none"; }} />
                     <span>{member.name.slice(0, 1).toUpperCase()}</span>
                   </div>
                   <div className="player-details">
