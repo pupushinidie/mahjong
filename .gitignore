@@ -1,0 +1,12 @@
+node_modules/
+dist/
+coverage/
+.env
+.DS_Store
+*.tsbuildinfo
+*.tmp
+art/out/
+art/__pycache__/
+logs/
+apps/web/preview.html
+apps/web/src/preview.tsx
