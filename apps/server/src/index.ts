@@ -197,10 +197,20 @@ function snapshot(room: RoomState, viewerId: string): LobbyRoomSnapshot {
     access: { ...room.access },
     chat: room.chat.map((entry) => ({ ...entry })),
     voice: [...room.voice].map(([id, state]) => ({ id, muted: state.muted })),
-    ...(room.turn ? { turnRemainingMs: Math.max(0, room.turn.deadline - Date.now()) } : {}),
+    ...(room.turn && showCountdown(room, viewerId) ? { turnRemainingMs: Math.max(0, room.turn.deadline - Date.now()) } : {}),
     ...(room.rematch ? { rematch: { remainingMs: Math.max(0, room.rematch.deadline - Date.now()), acceptedIds: [...room.rematch.accepted] } } : {}),
     ...(room.game ? { game: seated ? redactGameForViewer(room.game, seatOf(room, viewerId)) : spectatorGame(room) } : {}),
   };
+}
+
+/**
+ * 抢牌窗口的倒计时只给自己有选项、还没回应的人看：别人看到倒计时就知道有人能碰、能和。
+ */
+function showCountdown(room: RoomState, viewerId: string): boolean {
+  const game = room.game;
+  if (!game || game.stage !== "claim") return true;
+  const seat = game.players.findIndex((player) => player.id === seatOf(room, viewerId));
+  return seat >= 0 && game.claim?.options[seat] !== undefined && game.claim.responses[seat] === undefined;
 }
 
 /**
