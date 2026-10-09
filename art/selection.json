@@ -1,0 +1,6 @@
+{
+  "_note": "美术选择（第一轮由我挑，他还没看；画廊里可以换）。scene-* 是 512×288 场景，avatar 是 64 个候选里的编号，按座位 0–3 用。",
+  "scene-night": "teahouse-night-s32",
+  "scene-day": "teahouse-day-s42",
+  "avatars": [13, 0, 38, 21]
+}

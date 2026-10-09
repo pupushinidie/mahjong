@@ -318,8 +318,10 @@ function App() {
               </button>
             ))}
           </div>
-          <div className="mj-showcase" aria-hidden="true">
-            {SHOWCASE.map((tile) => <TileView key={tile} tile={tile} scale={3} />)}
+          <div className="mj-hero" style={{ backgroundImage: `url(${theme === "day" ? art.sceneDay : art.sceneNight})` }}>
+            <div className="mj-showcase" aria-hidden="true">
+              {SHOWCASE.map((tile) => <TileView key={tile} tile={tile} scale={2} />)}
+            </div>
           </div>
         </div>
 

@@ -21,7 +21,7 @@ import {
   type Suit,
   type Tile,
 } from "@mahjong/game";
-import { seatColor } from "./art.js";
+import { art, coverSize, seatColor } from "./art.js";
 import { useConfirm } from "./confirm.js";
 import GameRules from "./GameRules.js";
 import { GameRoomMenu, SpectateBar } from "./RoomExtras.js";
@@ -88,7 +88,7 @@ interface Layout {
 
 /** 别人手牌条的厚度、名牌宽度（桌面版）。 */
 const BAND = 76;
-const PLATE_W = 96;
+const PLATE_W = 120;
 
 /** 手机版：最上面一行三家的名牌。 */
 const MOBILE_OPP_ROW = 56;
@@ -117,7 +117,7 @@ function pickLayout(width: number, height: number): Layout {
     if (room - 2 * d >= 120 || hs === 2) break;
   }
   // 手牌一排要放得下 14 张
-  while (hs > 2 && 15 * TILE_W * hs + 260 > width) hs -= 1;
+  while (hs > 2 && 15 * TILE_W * hs + 24 > width) hs -= 1;
   room = Math.min(height - topBand - mine(hs), width - 2 * sideBand);
   const c = Math.max(96, Math.min(220, room - 2 * d));
   return { s, hs, c, d, w, field: c + 2 * d, mobile };
@@ -210,7 +210,7 @@ function seenCounts(game: GameState, mySeat: number): number[] {
 
 // ---------------------------------------------------------------------------
 
-function GameBoard({ room, busy, error, notice, brand, connection, themeToggle, chat, onCommand, onRematch, onDissolve, watchId, onWatch, onLeave }: GameBoardProps) {
+function GameBoard({ room, busy, error, notice, brand, connection, theme, themeToggle, chat, onCommand, onRematch, onDissolve, watchId, onWatch, onLeave }: GameBoardProps) {
   const game = room.game!;
   const member = room.members.find((candidate) => candidate.id === socket.id);
   const spectating = !member;
@@ -411,7 +411,8 @@ function GameBoard({ room, busy, error, notice, brand, connection, themeToggle, 
     switch (rel) {
       case 0: return { x: d + c - w, y: d + c, vw: w, vh: riverBoxH, rot: 0 };
       case 1: return { x: d + c, y: d, vw: riverBoxH, vh: w, rot: -90 };
-      case 2: return { x: d, y: d - riverBoxH, vw: w, vh: riverBoxH, rot: 0 };
+      // 对家的牌河从下往上排，第一排的牌身会伸出盒子底边，整体往上挪一个牌身的厚度
+      case 2: return { x: d, y: d - riverBoxH - (TILE_H - ROW_PITCH) * s, vw: w, vh: riverBoxH, rot: 0 };
       case 3: return { x: d - riverBoxH, y: d + c - w, vw: riverBoxH, vh: w, rot: 90 };
     }
   };
@@ -472,9 +473,12 @@ function GameBoard({ room, busy, error, notice, brand, connection, themeToggle, 
     return (
       <div className={["mj-plate", `p${rel}`, active ? "active" : "", player.out ? "out" : ""].join(" ")} style={{ "--seat": seatColor(rel) } as CSSProperties}>
         <div className="mj-plate-top">
-          {seat === game.dealer && <em className="mj-dealer" title="庄家">庄</em>}
-          <strong>{nameOf(seat)}{seat === mySeat && spectating ? "（观战视角）" : ""}</strong>
-          {player.void && <em className="mj-void" style={{ "--suit": SUIT_COLOR[player.void] } as CSSProperties} title={`缺${SUIT_NAMES[player.void]}`}>缺{SUIT_NAMES[player.void]}</em>}
+          <img className="mj-avatar" src={art.avatar(seat)} alt="" />
+          <strong title={player.name}>{nameOf(seat)}{seat === mySeat && spectating ? "（观战视角）" : ""}</strong>
+          <span className="mj-plate-tags">
+            {seat === game.dealer && <em className="mj-dealer" title="庄家">庄</em>}
+            {player.void && <em className="mj-void" style={{ "--suit": SUIT_COLOR[player.void] } as CSSProperties} title={`缺${SUIT_NAMES[player.void]}`}>缺{SUIT_NAMES[player.void]}</em>}
+          </span>
         </div>
         <div className="mj-plate-bottom">
           <b className={player.handDelta > 0 ? "up" : player.handDelta < 0 ? "down" : ""}>{player.score}</b>
@@ -506,14 +510,14 @@ function GameBoard({ room, busy, error, notice, brand, connection, themeToggle, 
   /** 别人的一条牌（手牌 + 副露 + 胡的牌）按某个倍数有多长。 */
   const stripLength = (player: SichuanPlayer, backScale: number) =>
     player.handCount * TILE_W * backScale + player.melds.length * ((2 * TILE_W + TILE_H) * s + 3 * s) + player.wins.length * TILE_W * s + 24;
-  const opponentHand = (seat: number, scale: number) => {
+  const opponentHand = (seat: number, scale: number, squeeze = false) => {
     const player = game.players[seat]!;
     const revealed = player.hand.length > 0;
     const tiles = revealed ? sortTiles(player.hand) : Array.from({ length: player.handCount }, () => -1);
     const drawn = player.drawn !== null;
     const body = drawn && !revealed ? tiles.slice(0, -1) : tiles;
     return (
-      <span className={revealed ? "mj-hand-row revealed" : "mj-hand-row"}>
+      <span className={["mj-hand-row", revealed ? "revealed" : "", squeeze ? "squeeze" : ""].join(" ")}>
         {body.map((tile, index) => <TileView key={index} tile={tile} scale={scale} />)}
         {drawn && !revealed && <TileView tile={-1} scale={scale} className="drawn" />}
       </span>
@@ -528,6 +532,8 @@ function GameBoard({ room, busy, error, notice, brand, connection, themeToggle, 
     // 放得下就和牌河一样大；放不下先把手牌（背面或亮出的）缩成 1 倍，再不行副露也缩
     const backScale = !layout.mobile && stripLength(player, s) <= field ? s : 1;
     const meldScale = !layout.mobile && stripLength(player, 1) <= field ? s : 1;
+    // 1 倍还放不下（亮牌 + 副露 + 胡的牌太长）：手牌叠半张排
+    const squeeze = stripLength(player, 1) - (meldScale === s ? 0 : player.melds.length * (2 * TILE_W + TILE_H) * (s - 1)) > field;
     // 手牌条在视觉上的矩形
     const strip = rel === 2
       ? { x: fieldLeft, y: fieldTop - band - 4, vw: long, vh: band, rot: 0 }
@@ -540,14 +546,14 @@ function GameBoard({ room, busy, error, notice, brand, connection, themeToggle, 
     const plateStyle: CSSProperties = layout.mobile
       ? { left: 4 + (rel === 3 ? 0 : rel === 2 ? 1 : 2) * ((tableBox.width - 8) / 3), top: 4, width: (tableBox.width - 8) / 3 - 4 }
       : rel === 2
-        ? { left: fieldLeft - PLATE_W - 8, top: fieldTop - band - 4 }
+        ? { left: fieldLeft - 8 - band - 8 - PLATE_W, top: fieldTop - band - 4 }
         : rel === 1
           ? { left: fieldLeft + field + 8 + band + 8, top: fieldTop + field / 2, transform: "translateY(-50%)" }
           : { left: fieldLeft - 8 - band - 8 - PLATE_W, top: fieldTop + field / 2, transform: "translateY(-50%)" };
     return (
       <div key={`seat-${seat}`} className={`mj-seat s${rel}`}>
         <div className="mj-strip" style={stripStyle}>
-          {opponentHand(seat, backScale)}
+          {opponentHand(seat, backScale, squeeze)}
           {player.melds.length > 0 && <span className="mj-melds">{player.melds.map((meld, index) => meldNode(meld, `${seat}-${index}`, meldScale, seat))}</span>}
           {winTiles(seat, meldScale)}
         </div>
@@ -673,6 +679,13 @@ function GameBoard({ room, busy, error, notice, brand, connection, themeToggle, 
   );
 
   const showSummary = stage === "handEnd" && game.summary && !hideSummary;
+  const statusMini = (
+    <div className="mj-status-mini">
+      <strong>{headline}</strong>
+      {secondsLeft !== null && playing && (needMe || stage === "handEnd") && <b className={secondsLeft <= 5 ? "low" : ""}>{secondsLeft}s</b>}
+      {(error || shownNotice) && <small className={error ? "error" : ""}>{error || shownNotice}</small>}
+    </div>
+  );
 
   return (
     <div className={layout.mobile ? "mj-screen mobile" : "mj-screen"}>
@@ -699,7 +712,11 @@ function GameBoard({ room, busy, error, notice, brand, connection, themeToggle, 
       </header>
 
       <div className={drawer ? "mj-layout drawer-open" : "mj-layout"}>
-        <div className={`mj-table s${s}`} ref={tableRef}>
+        <div
+          className={`mj-table s${s}`}
+          ref={tableRef}
+          style={{ "--scene": `url(${theme === "day" ? art.sceneDay : art.sceneNight})`, "--scene-size": coverSize(tableBox.width, tableBox.height) } as CSSProperties}
+        >
           <div className="mj-field" style={{ left: fieldLeft, top: fieldTop, width: field, height: field, "--s": s } as CSSProperties}>
             <div className="mj-felt" />
             {centerBox}
@@ -710,7 +727,7 @@ function GameBoard({ room, busy, error, notice, brand, connection, themeToggle, 
           <section className={["mj-mine", myMove ? "active" : ""].join(" ")} style={{ "--hs": hs, "--s": s } as CSSProperties}>
             <div className="mj-mine-bar">
               {plate(mySeat)}
-              {tingLine}
+              {layout.mobile ? statusMini : tingLine}
             </div>
             <div className="mj-mine-row">
               {actionBar}
@@ -721,14 +738,11 @@ function GameBoard({ room, busy, error, notice, brand, connection, themeToggle, 
               {me.melds.length > 0 && <span className="mj-melds mine">{me.melds.map((meld, index) => meldNode(meld, `me-${index}`, s, mySeat))}</span>}
               {winTiles(mySeat, s)}
             </div>
+            {layout.mobile && tingLine}
             {activeFx.filter((item) => item.seat === mySeat).map((item) => <span key={item.key} className={`mj-fx ${item.kind}`}>{item.text}</span>)}
           </section>
           {banner && <div className="mj-banner" role="status">{banner}</div>}
-          <div className="mj-status-mini">
-            <strong>{headline}</strong>
-            {secondsLeft !== null && playing && (needMe || stage === "handEnd") && <b className={secondsLeft <= 5 ? "low" : ""}>{secondsLeft}s</b>}
-            {(error || shownNotice) && <small className={error ? "error" : ""}>{error || shownNotice}</small>}
-          </div>
+          {!layout.mobile && statusMini}
           {me.auto && !spectating && playing && (
             <div className="mj-auto-banner">
               托管中：机器人替你出牌

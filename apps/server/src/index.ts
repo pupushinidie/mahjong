@@ -547,7 +547,7 @@ function afterGameChange(room: RoomState): void {
 function newGame(room: RoomState, seed = randomInt(2 ** 32 - 1)): GameState {
   const humans = room.members.map((member) => ({ id: member.playerId, name: member.name }));
   const names = BOT_NAMES.filter((name) => !humans.some((human) => human.name === name));
-  const bots = Array.from({ length: SEAT_COUNT - humans.length }, (_, k) => ({ id: `bot${k + 1}`, name: `${names[k]}（机器人）`, bot: true }));
+  const bots = Array.from({ length: SEAT_COUNT - humans.length }, (_, k) => ({ id: `bot${k + 1}`, name: names[k]!, bot: true }));
   return createGame([...humans, ...bots], seed, room.options);
 }
 

@@ -102,10 +102,10 @@ button.mj-tile:disabled { cursor: default; }
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  background:
-    radial-gradient(ellipse at 50% 45%, rgba(255, 190, 110, 0.10), transparent 62%),
-    repeating-linear-gradient(90deg, #3a2618 0 6px, #34210f 6px 12px, #3d2a1a 12px 14px),
-    #33210f;
+  /* 茶馆场景按整数倍放大铺满（--scene-size 由 GameBoard 算），上面盖一层罩色让牌更突出 */
+  --veil: rgba(18, 10, 4, 0.45);
+  background: linear-gradient(var(--veil), var(--veil)), var(--scene) center / var(--scene-size, cover) no-repeat, #33210f;
+  image-rendering: pixelated;
   box-shadow: 0 0 0 var(--px) var(--edge), inset 0 0 0 calc(var(--px) * 2) #6b4a2a, inset 0 0 0 calc(var(--px) * 4) #24170b;
 }
 .mj-field { position: absolute; }
@@ -162,7 +162,7 @@ button.mj-tile:disabled { cursor: default; }
 .mj-meld-slot .stacked { margin-bottom: calc(var(--s, 2) * -2px); order: -1; }
 .mj-wins { display: inline-flex; align-items: flex-end; gap: 4px; margin-left: 6px; }
 
-.mj-plate-wrap { position: absolute; width: 96px; }
+.mj-plate-wrap { position: absolute; width: 120px; }
 .mj-plate {
   --rim: #4b6aa0;
   --shade: #080c17;
@@ -645,4 +645,36 @@ button.mj-tile:disabled { cursor: default; }
   .app-shell .mj-summary footer .primary-button { width: 100%; min-width: 0; }
   .mj-sum-lines th { max-width: 52px; }
   .app-shell .mj-final .gm-panel-actions { flex-direction: column; }
+}
+/* 左右两家的牌条是转过的：角标不跟着转着显示，靠金框和名牌上的「已胡」 */
+.mj-seat.s1 .mj-tile-badge, .mj-seat.s3 .mj-tile-badge { display: none; }
+.mj-hand-row.squeeze .mj-tile + .mj-tile { margin-left: calc(var(--s, 2) * -5px); }
+.mj-hand-row.squeeze .mj-tile.drawn { margin-left: 2px; }
+@media (max-width: 639px) {
+  .mj-screen.mobile .mj-mine-bar .mj-status-mini { position: static; display: flex; flex-direction: row; align-items: center; gap: 8px; max-width: none; margin-left: auto; padding: 4px 8px; }
+  .mj-screen.mobile .mj-ting.muted { display: none; }
+}
+
+.mj-avatar { width: 32px; height: 32px; flex: 0 0 32px; margin: -2px 0; image-rendering: pixelated; }
+.mj-plate-tags { display: inline-flex; gap: 4px; }
+.mj-plate-wrap .mj-plate-top { display: grid; grid-template-columns: 32px minmax(0, 1fr); column-gap: 6px; row-gap: 2px; align-items: center; }
+.mj-plate-wrap .mj-plate-top .mj-avatar { grid-row: 1 / 3; margin: 0; }
+.mj-plate-wrap .mj-plate-top strong { min-width: 0; }
+.mj-plate-wrap .mj-plate-tags:empty { display: none; }
+.mj-seat.s1 .mj-wins-count, .mj-seat.s3 .mj-wins-count { display: none; }
+.mj-screen.mobile .mj-plate-wrap .mj-avatar { display: none; }
+.app-shell .mj-hero {
+  position: relative;
+  width: 512px;
+  height: 288px;
+  margin-top: 16px;
+  background: center / 512px 288px no-repeat;
+  image-rendering: pixelated;
+  box-shadow: 0 0 0 var(--px) var(--edge), 0 0 0 calc(var(--px) * 2) var(--rim), 0 0 0 calc(var(--px) * 3) var(--edge);
+}
+.app-shell .mj-hero .mj-showcase { position: absolute; left: 16px; bottom: 12px; margin: 0; gap: 4px; }
+.app-shell .mj-variants { grid-template-columns: 1fr 1fr; }
+@media (max-width: 899px) {
+  .app-shell .mj-variants { grid-template-columns: 1fr; }
+  .app-shell .mj-hero { width: 100%; max-width: 512px; background-size: cover; }
 }

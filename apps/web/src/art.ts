@@ -4,6 +4,9 @@ const BASE = `${import.meta.env.BASE_URL}art/`;
 export const art = {
   /** 牌面图集：每张 20×32，见 art/tiles.py。 */
   tiles: `${BASE}tiles.png`,
+  /** 四川麻将的茶馆场景（512×288）：夜间灯笼、白天竹帘阳光。牌桌背景和首页主图。 */
+  sceneNight: `${BASE}scene-night.png`,
+  sceneDay: `${BASE}scene-day.png`,
   /** 座位头像 0–3（32px）。 */
   avatar: (index: number) => `${BASE}avatar-${index % 4}.png`,
 };

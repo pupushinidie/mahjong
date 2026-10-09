@@ -15,3 +15,4 @@
   --bad: #f25c5c;
 }
 :root[data-theme="day"] .mj-plate.active { background: #3a2c10; }
+:root[data-theme="day"] .mj-table { --veil: rgba(40, 24, 8, 0.18); }
