@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>麻将 · 选图</title>
+<style>
+  :root { color-scheme: dark; --bg: #0c1424; --panel: #16223a; --panel2: #1e2d4a; --rim: #3d5482; --text: #eef3fb; --muted: #93a3bd; --gold: #f0c050; --ok: #62c97a; --bad: #f25c5c; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.6 -apple-system, "PingFang SC", sans-serif; }
+  main { width: min(1200px, calc(100% - 32px)); margin: 0 auto; padding: 24px 0 80px; }
+  h1 { margin: 0 0 4px; color: var(--gold); font-size: 26px; }
+  .meta { color: var(--muted); }
+  .intro { margin: 12px 0 20px; padding: 12px 16px; background: var(--panel); border-left: 4px solid var(--gold); white-space: pre-line; }
+  .preview { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 28px; }
+  .preview figure { margin: 0; padding: 10px; background: var(--panel); }
+  .preview figure.wide { grid-column: 1 / -1; }
+  .preview img { display: block; max-width: 100%; }
+  .preview figure.wide img { width: 100%; }
+  .preview figure.small img { image-rendering: pixelated; margin: 0 auto; }
+  .preview figcaption { margin-top: 6px; color: var(--muted); }
+  section.item { margin: 0 0 22px; padding: 16px; background: var(--panel); border: 2px solid var(--rim); }
+  section.item.done { border-color: var(--ok); }
+  section.item.redo { border-color: var(--bad); }
+  .item h2 { margin: 0; font-size: 18px; }
+  .item h2 small { margin-left: 8px; color: var(--muted); font-size: 13px; font-weight: 400; }
+  .note { margin: 6px 0 12px; color: var(--muted); white-space: pre-line; }
+  .cands { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+  .item.wide .cands { grid-template-columns: 1fr; }
+  .cand { position: relative; display: flex; flex-direction: column; gap: 8px; padding: 10px; background: var(--panel2); border: 2px solid transparent; }
+  .cand.picked { border-color: var(--gold); background: #3a2c10; }
+  .cand .img { display: grid; place-items: center; min-height: 120px; background: repeating-conic-gradient(#d8dde6 0 25%, #eef1f5 0 50%) 0 0 / 16px 16px; }
+  .cand img { image-rendering: pixelated; max-width: 100%; }
+  .cand .label { font-size: 13px; }
+  .cand .rec { position: absolute; top: 6px; right: 6px; padding: 0 6px; background: var(--gold); color: #2a1c06; font-size: 12px; }
+  button { font: inherit; cursor: pointer; border: 0; padding: 6px 12px; color: var(--text); background: #2c4066; }
+  button.on { background: var(--gold); color: #2a1c06; }
+  button.redo.on { background: var(--bad); color: #fff; }
+  .redo-row { display: flex; gap: 8px; align-items: center; margin-top: 12px; flex-wrap: wrap; }
+  .redo-row textarea { flex: 1 1 300px; min-height: 36px; padding: 6px 8px; color: var(--text); background: var(--bg); border: 1px solid var(--rim); font: inherit; }
+  .choice { text-align: left; }
+  .summary { position: sticky; bottom: 0; margin-top: 28px; padding: 12px 16px; background: #0f1a2e; border-top: 3px solid var(--gold); }
+  .summary textarea { width: 100%; min-height: 96px; padding: 8px; color: var(--text); background: var(--bg); border: 1px solid var(--rim); font: 13px/1.6 ui-monospace, Menlo, monospace; }
+  .summary .row { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 8px; }
+  .muted { color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <h1 id="title">麻将 · 选图</h1>
+  <div class="meta" id="meta"></div>
+  <div class="intro" id="intro"></div>
+  <div class="preview" id="preview"></div>
+  <div id="items"></div>
+  <div class="summary">
+    <div class="row">
+      <strong>选择汇总</strong>
+      <span class="muted" id="progress"></span>
+      <button id="copy">复制这段文字</button>
+    </div>
+    <textarea id="summary" readonly></textarea>
+  </div>
+</main>
+<script>
+  // 选择存在 localStorage；每 30 秒重新读一次 gallery.json（新出的图会出现，滚动位置和选择都不丢）。
+  let data = null;
+  const key = () => `seasalt-gallery-${data?.round ?? "r1"}`;
+  function load() { try { return JSON.parse(localStorage.getItem(key()) || "{}"); } catch { return {}; } }
+  function save(state) { try { localStorage.setItem(key(), JSON.stringify(state)); } catch {} }
+  const bust = () => `?t=${Date.now()}`;
+
+  function render() {
+    const state = load();
+    document.getElementById("title").textContent = data.title;
+    document.getElementById("meta").textContent = `更新于 ${data.updated} · PixelLab 本项目已花 $${data.spent.toFixed(2)} · 页面每 30 秒自动刷新`;
+    document.getElementById("intro").textContent = data.intro;
+    const preview = document.getElementById("preview");
+    preview.innerHTML = "";
+    for (const shot of data.preview ?? []) {
+      const figure = document.createElement("figure");
+      figure.className = shot.src.endsWith(".gif") ? "small" : "wide";
+      figure.innerHTML = `<img src="${shot.src}" alt=""><figcaption></figcaption>`;
+      figure.querySelector("figcaption").textContent = shot.caption;
+      preview.append(figure);
+    }
+    const items = document.getElementById("items");
+    items.innerHTML = "";
+    for (const item of data.items) {
+      const choice = state[item.id] ?? {};
+      const section = document.createElement("section");
+      section.className = `item${item.wide ? " wide" : ""}${choice.pick === "redo" ? " redo" : choice.pick ? " done" : ""}`;
+      section.innerHTML = `<h2></h2><div class="note"></div><div class="cands"></div>
+        <div class="redo-row"><button class="redo">都不满意，重画</button><textarea placeholder="备注（想要什么样，重画时用）"></textarea></div>`;
+      section.querySelector("h2").innerHTML = `${item.title}<small>${item.kind === "choice" ? "规则确认" : `${item.candidates.length} 个候选`}</small>`;
+      section.querySelector(".note").textContent = item.note ?? "";
+      const cands = section.querySelector(".cands");
+      for (const cand of item.candidates) {
+        const box = document.createElement("div");
+        box.className = `cand${choice.pick === cand.id ? " picked" : ""}`;
+        if (item.kind === "choice") {
+          box.innerHTML = `<div class="label"></div><button class="choice">选这个</button>`;
+        } else {
+          const scale = item.scale ?? 3;
+          box.innerHTML = `<div class="img"><img src="${cand.src}${bust()}" style="zoom:${scale}"></div><div class="label"></div><button>选这张</button>`;
+        }
+        box.querySelector(".label").textContent = `${cand.id} · ${cand.label ?? ""}`;
+        if (cand.recommended) box.insertAdjacentHTML("beforeend", `<span class="rec">推荐</span>`);
+        const button = box.querySelector("button");
+        if (choice.pick === cand.id) { button.classList.add("on"); button.textContent = "已选"; }
+        button.onclick = () => { const s = load(); s[item.id] = { ...(s[item.id] ?? {}), pick: cand.id }; save(s); render(); };
+        cands.append(box);
+      }
+      const redo = section.querySelector(".redo");
+      const note = section.querySelector("textarea");
+      note.value = choice.note ?? "";
+      if (choice.pick === "redo") redo.classList.add("on");
+      redo.onclick = () => { const s = load(); s[item.id] = { ...(s[item.id] ?? {}), pick: "redo" }; save(s); render(); };
+      note.oninput = () => { const s = load(); s[item.id] = { ...(s[item.id] ?? {}), note: note.value }; save(s); summarize(); };
+      items.append(section);
+    }
+    summarize();
+  }
+
+  function summarize() {
+    const state = load();
+    const lines = [`【${data.title}】`];
+    let done = 0;
+    for (const item of data.items) {
+      const choice = state[item.id] ?? {};
+      let text = "（未选）";
+      if (choice.pick === "redo") text = "都不满意，重画";
+      else if (choice.pick) {
+        const cand = item.candidates.find((c) => c.id === choice.pick);
+        text = `选 ${choice.pick}${cand?.label ? `（${cand.label}）` : ""}`;
+      }
+      if (choice.pick) done += 1;
+      lines.push(`- ${item.title}：${text}${choice.note ? `；备注：${choice.note}` : ""}`);
+    }
+    document.getElementById("summary").value = lines.join("\n");
+    document.getElementById("progress").textContent = `已选 ${done} / ${data.items.length}`;
+  }
+
+  document.getElementById("copy").onclick = async () => {
+    const text = document.getElementById("summary").value;
+    try { await navigator.clipboard.writeText(text); } catch { document.getElementById("summary").select(); document.execCommand("copy"); }
+    document.getElementById("copy").textContent = "已复制";
+    setTimeout(() => (document.getElementById("copy").textContent = "复制这段文字"), 1500);
+  };
+
+  async function refresh() {
+    try {
+      const response = await fetch(`gallery.json${bust()}`);
+      data = await response.json();
+      const active = document.activeElement;
+      if (active?.tagName === "TEXTAREA" && active.closest(".item")) { summarize(); return; } // 正在写备注时不重画
+      render();
+    } catch (error) {
+      document.getElementById("meta").textContent = `读取 gallery.json 失败：${error}`;
+    }
+  }
+  refresh();
+  setInterval(refresh, 30_000);
+</script>
+</body>
+</html>
