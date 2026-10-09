@@ -38,7 +38,7 @@ export const palette: DayPalette = {
     // 大标题的投影：夜间是黑色，白底上换成浅金色
     "calc(var(--px) * 2) calc(var(--px) * 2) 0 var(--edge)": "calc(var(--px) * 2) calc(var(--px) * 2) 0 #f0d890",
   },
-  keep: ["mj-table", "mj-field", "mj-felt", "mj-center", "mj-tile", "mj-sprite", "mj-fx", "mj-banner", "mj-plate", "mj-chip", "mj-ting", "mj-actions", "mj-status-mini", "mj-auto-banner", "mj-dealer", "mj-void"],
+  keep: ["mj-wind", "mj-riichi-stick", "mj-center-seatwind", "mj-table", "mj-field", "mj-felt", "mj-center", "mj-tile", "mj-sprite", "mj-fx", "mj-banner", "mj-plate", "mj-chip", "mj-ting", "mj-actions", "mj-status-mini", "mj-auto-banner", "mj-dealer", "mj-void"],
   textVarColors: {
     "--gold": "#94650a",
     "--gold-2": "#94650a",

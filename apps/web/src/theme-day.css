@@ -7,7 +7,7 @@
 
 
 /* 牌桌（木桌、绿呢）白天也保持原色；桌上的深色小牌子（名牌、听牌提示、操作条、状态条）里的字用夜间的浅色 */
-:root[data-theme="day"] :is(.mj-plate, .mj-status-mini, .mj-ting, .mj-actions, .mj-auto-banner, .mj-chip) {
+:root[data-theme="day"] :is(.mj-plate, .mj-status-mini, .mj-ting, .mj-actions, .mj-auto-banner, .mj-chip, .mj-riichi-stick) {
   --text: #eef3fb;
   --muted: #93a3bd;
   --gold: #f0c050;

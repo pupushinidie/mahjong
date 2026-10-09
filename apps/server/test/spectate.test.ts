@@ -211,7 +211,7 @@ describe("观战和公开房间", () => {
     // 每位玩家自己看到的那一份里，自己身上的秘密。
     const owners = players.reduce((total, client) => {
       const game = latest.get(client)!.game!;
-      return total + secretsSeen({ ...game, players: game.players.filter((player) => player.id === seatOf(client)) });
+      return total + secretsSeen({ ...game, players: game.players.filter((player) => player.id === seatOf(client)) } as GameState);
     }, 0);
     if (HIDDEN_INFO) {
       expect(owners).toBeGreaterThan(0);

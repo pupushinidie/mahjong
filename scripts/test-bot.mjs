@@ -5,6 +5,7 @@
  *
  * 用法：
  *   node scripts/test-bot.mjs host <昵称> [--start-at=N] [--mode=xueliu] [--hands=4]   建房（四川麻将），打印房间码；凑够 N 个真人自动开局
+ *   node scripts/test-bot.mjs host <昵称> --variant=riichi [--length=hanchan]         建立直麻将的房（默认东风战）
  *   node scripts/test-bot.mjs join <房间码> <昵称>                                       加入房间
  *   node scripts/test-bot.mjs fill <房间码> <人数> [昵称前缀=陪玩]                        一次加入好几个
  *
@@ -85,7 +86,7 @@ function runBot(name, setup) {
       socket.emit("room:start", (response) => log(response.ok ? "开局" : `开局失败：${response.error}`));
     }
     if (room.game?.phase === "finished" && room.game.finalResult && !room.rematch?.acceptedIds.length) {
-      const scores = room.game.players.map((player) => `${player.name} ${player.score}`).join(" / ");
+      const scores = room.game.players.map((player) => `${player.name} ${player.score ?? player.points}`).join(" / ");
       log("终局：", scores, "胜者", room.game.finalResult.winners.join(","));
     }
     void act();
@@ -100,7 +101,9 @@ function runBot(name, setup) {
 
 if (mode === "host") {
   const [name = "房主陪玩"] = positional;
-  const options = { variant: "sichuan", mode: flag("mode", "xuezhan"), hands: Number(flag("hands", 8)) };
+  const options = flag("variant", "sichuan") === "riichi"
+    ? { variant: "riichi", length: flag("length", "tonpuu") }
+    : { variant: "sichuan", mode: flag("mode", "xuezhan"), hands: Number(flag("hands", 8)) };
   runBot(name, (socket, done, log) => {
     socket.emit("room:create", { name, options }, (response) => {
       if (!response.ok) {

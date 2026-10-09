@@ -7,8 +7,12 @@ export const art = {
   /** 四川麻将的茶馆场景（512×288）：夜间灯笼、白天竹帘阳光。牌桌背景和首页主图。 */
   sceneNight: `${BASE}scene-night.png`,
   sceneDay: `${BASE}scene-day.png`,
-  /** 座位头像 0–3（32px）。 */
+  /** 立直麻将的日式雀庄场景（512×288）。 */
+  riichiNight: `${BASE}riichi-night.png`,
+  riichiDay: `${BASE}riichi-day.png`,
+  /** 座位头像 0–3（32px）：四川是茶客，立直是雀庄的客人。 */
   avatar: (index: number) => `${BASE}avatar-${index % 4}.png`,
+  riichiAvatar: (index: number) => `${BASE}riichi-avatar-${index % 4}.png`,
 };
 
 /** 座位色：自己、下家、对家、上家。 */

@@ -889,7 +889,7 @@ function abortiveDraw(ctx: Ctx, kind: DrawResult["kind"]): void {
 }
 
 /** 这一局打完：决定连庄、本场、下一局，或者半庄结束（规则书 7.1、7.2）。 */
-function endHand(ctx: Ctx, wins: RiichiWin[], drawResult: DrawResult | null, deltas: [number, number, number, number]): void {
+function endHand(ctx: Ctx, wins: RiichiWin[], drawResult: DrawResult | null, _deltas: [number, number, number, number]): void {
   const { state } = ctx;
   const label = roundLabel(state);
   const dealerWon = wins.some((win) => win.seat === state.dealer);
@@ -924,7 +924,8 @@ function endHand(ctx: Ctx, wins: RiichiWin[], drawResult: DrawResult | null, del
     roundLabel: label,
     wins,
     draw: drawResult,
-    deltas,
+    // 本局得失：含这一局交的立直棒
+    deltas: state.players.map((player) => player.handDelta) as RiichiHandResult["deltas"],
     points: state.players.map((player) => player.points) as RiichiHandResult["points"],
     renchan,
     gameOver,

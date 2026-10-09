@@ -102,7 +102,7 @@ function OnlineRooms({ rooms, connected, busy, onJoin }: {
 function variantLabel(room: PublicRoomSummary): string {
   const options = room.options;
   if (options.variant === "sichuan") return `四川 · ${options.mode === "xueliu" ? "血流" : "血战"}`;
-  return "麻将";
+  return `立直 · ${options.length === "tonpuu" ? "东风" : "半庄"}`;
 }
 
 export default OnlineRooms;

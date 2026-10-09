@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import {
   canTsumo,
   discardable,
@@ -13,11 +13,12 @@ import {
   tingInfo,
   type ClaimAction,
   type GameCommand,
-  type GameEvent,
-  type GameState,
+  type SichuanEvent as GameEvent,
+  type SichuanState as GameState,
   type LobbyRoomSnapshot,
   type Meld,
   type SichuanPlayer,
+  type SichuanState,
   type Suit,
   type Tile,
 } from "@mahjong/game";
@@ -26,6 +27,7 @@ import { useConfirm } from "./confirm.js";
 import GameRules from "./GameRules.js";
 import { GameRoomMenu, SpectateBar } from "./RoomExtras.js";
 import { socket } from "./socket.js";
+import { BAND, MOBILE_OPP_ROW, PLATE_W, useCountdown, useLayout } from "./table.js";
 import { kindLabel, ROW_PITCH, TILE_H, TILE_W, tileLabel, TileView } from "./tiles.js";
 import type { Theme } from "./theme.js";
 
@@ -54,89 +56,6 @@ const ACTION_TEXT: Record<ClaimAction | "pass", string> = { hu: "胡", kong: "�
 /** 座位相对自己的位置：0 自己（下）、1 下家（右）、2 对家（上）、3 上家（左）。 */
 type Rel = 0 | 1 | 2 | 3;
 const REL_CLASS = ["me", "right", "top", "left"] as const;
-
-function useCountdown(room: LobbyRoomSnapshot): number | null {
-  const [now, setNow] = useState(Date.now());
-  const [anchor, setAnchor] = useState({ at: Date.now(), ms: room.turnRemainingMs });
-  useEffect(() => setAnchor({ at: Date.now(), ms: room.turnRemainingMs }), [room]);
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), 500);
-    return () => window.clearInterval(timer);
-  }, []);
-  if (anchor.ms === undefined) return null;
-  return Math.max(0, Math.ceil((anchor.ms - Math.max(0, now - anchor.at)) / 1000));
-}
-
-// ---------------------------------------------------------------------------
-// 尺寸：按牌桌区域的大小选整数倍和中间方框大小（像素牌只按整数倍放大）
-
-interface Layout {
-  /** 牌河、副露、别人手牌的倍数。 */
-  readonly s: number;
-  /** 自己手牌的倍数。 */
-  readonly hs: number;
-  /** 中间方框边长。 */
-  readonly c: number;
-  /** 牌河 3 排的深度（方框到牌桌边）。 */
-  readonly d: number;
-  /** 牌河宽（6 张）。 */
-  readonly w: number;
-  /** 整个牌河方阵的边长。 */
-  readonly field: number;
-  readonly mobile: boolean;
-}
-
-/** 别人手牌条的厚度、名牌宽度（桌面版）。 */
-const BAND = 76;
-const PLATE_W = 120;
-
-/** 手机版：最上面一行三家的名牌。 */
-const MOBILE_OPP_ROW = 56;
-
-function pickLayout(width: number, height: number): Layout {
-  const mobile = width < 640;
-  const s = mobile ? 1 : 2;
-  const d = (2 * ROW_PITCH + TILE_H) * s;
-  const w = 6 * TILE_W * s;
-  if (mobile) {
-    // 手牌 2 倍分两排；牌河、别人的牌 1 倍
-    const hs = 2;
-    const sideBand = 8 + 36;
-    const room = Math.min(width - 2 * sideBand, height - MOBILE_OPP_ROW - 40 - (TILE_H * hs * 2 + 48));
-    const c = Math.max(64, Math.min(140, room - 2 * d));
-    return { s, hs, c, d, w, field: c + 2 * d, mobile };
-  }
-  const sideBand = 8 + BAND + 8 + PLATE_W;
-  const topBand = BAND + 8;
-  const mine = (h: number) => TILE_H * h + 64;
-  // 自己的手牌尽量大：4 倍放不下（中间方框小于 120）就 3 倍，再不行 2 倍
-  let hs = 4;
-  let room = 0;
-  for (; hs >= 2; hs -= 1) {
-    room = Math.min(height - topBand - mine(hs), width - 2 * sideBand);
-    if (room - 2 * d >= 120 || hs === 2) break;
-  }
-  // 手牌一排要放得下 14 张
-  while (hs > 2 && 15 * TILE_W * hs + 24 > width) hs -= 1;
-  room = Math.min(height - topBand - mine(hs), width - 2 * sideBand);
-  const c = Math.max(96, Math.min(220, room - 2 * d));
-  return { s, hs, c, d, w, field: c + 2 * d, mobile };
-}
-
-function useLayout(): [React.RefObject<HTMLDivElement | null>, Layout, { width: number; height: number }] {
-  const ref = useRef<HTMLDivElement | null>(null);
-  const [box, setBox] = useState({ width: 1100, height: 700 });
-  useLayoutEffect(() => {
-    const element = ref.current;
-    if (!element) return;
-    const measure = () => setBox({ width: element.clientWidth, height: element.clientHeight });
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
-  return [ref, pickLayout(box.width, box.height), box];
-}
 
 // ---------------------------------------------------------------------------
 // 文案
@@ -211,7 +130,7 @@ function seenCounts(game: GameState, mySeat: number): number[] {
 // ---------------------------------------------------------------------------
 
 function GameBoard({ room, busy, error, notice, brand, connection, theme, themeToggle, chat, onCommand, onRematch, onDissolve, watchId, onWatch, onLeave }: GameBoardProps) {
-  const game = room.game!;
+  const game = room.game as SichuanState;
   const member = room.members.find((candidate) => candidate.id === socket.id);
   const spectating = !member;
   const myId = member?.playerId ?? watchId;
@@ -527,10 +446,19 @@ function GameBoard({ room, busy, error, notice, brand, connection, theme, themeT
   /** 别人的手牌：背面（下桌、结算时是正面），刚摸的那张隔开。 */
   /** 别人的一条牌（手牌 + 副露 + 胡的牌）按某个倍数有多长。 */
   const stripLength = (player: SichuanPlayer, backScale: number) =>
-    player.handCount * TILE_W * backScale + player.melds.length * ((2 * TILE_W + TILE_H) * s + 3 * s) + player.wins.length * TILE_W * s + 24;
+    (layout.mobile && player.hand.length === 0 ? TILE_W + 32 : player.handCount * TILE_W * backScale) + player.melds.length * ((2 * TILE_W + TILE_H) * s + 3 * s) + player.wins.length * TILE_W * s + 24;
   const opponentHand = (seat: number, scale: number, squeeze = false) => {
     const player = game.players[seat]!;
     const revealed = player.hand.length > 0;
+    // 手机上别人的暗手牌只画一张牌背加张数，免得牌条太长
+    if (layout.mobile && !revealed) {
+      return (
+        <span className="mj-hand-row compact">
+          <TileView tile={-1} scale={1} />
+          <em className="mj-hand-count">×{player.handCount}</em>
+        </span>
+      );
+    }
     const tiles = revealed ? sortTiles(player.hand) : Array.from({ length: player.handCount }, () => -1);
     const drawn = player.drawn !== null;
     const body = drawn && !revealed ? tiles.slice(0, -1) : tiles;
@@ -739,7 +667,7 @@ function GameBoard({ room, busy, error, notice, brand, connection, theme, themeT
         </div>
         <div className={menu ? "mj-topbar-right open" : "mj-topbar-right"} onClick={() => layout.mobile && setMenu(false)}>
           {themeToggle}
-          <GameRules />
+          <GameRules variant="sichuan" />
           <GameRoomMenu room={room} />
           {isHost && <button className="quiet-button danger" type="button" onClick={onDissolve}>解散</button>}
           <button className="quiet-button mj-drawer-toggle" type="button" aria-expanded={drawer} onClick={() => setDrawer(!drawer)}>

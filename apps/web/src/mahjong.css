@@ -681,3 +681,64 @@ button.mj-tile:disabled { cursor: default; }
 
 /* 定缺：选中的那一门 */
 .app-shell .mj-actions .mj-void-button.chosen { --rim: var(--gold); --shade: #7a5410; color: var(--gold); background: #3a2c10; }
+
+/* ---------- 立直麻将 ---------- */
+.mj-wind { padding: 0 3px; color: #2a1c06; background: #d8e0ee; font-style: normal; }
+.mj-riichi-stick {
+  padding: 0 4px;
+  color: #c8323c;
+  background: #f6f0de;
+  box-shadow: 0 0 0 var(--px) var(--edge);
+  font-style: normal;
+}
+.mj-center.riichi { gap: 2px; }
+.mj-center.riichi .mj-center-hand b { font-size: 24px; }
+.mj-center-sticks { color: #d8c49a; font-size: 12px; white-space: nowrap; }
+.mj-center-seatwind { position: absolute; padding: 0 3px; color: #d8c49a; font-size: 12px; line-height: 1.2; }
+.mj-center-seatwind.dealer { color: #2a1c06; background: var(--gold); }
+.mj-center-seatwind.on { box-shadow: 0 0 0 var(--px) var(--gold); }
+.mj-center-seatwind.w0 { left: 50%; bottom: 8px; transform: translateX(-50%); }
+.mj-center-seatwind.w2 { left: 50%; top: 8px; transform: translateX(-50%); }
+.mj-center-seatwind.w1 { right: 8px; top: 50%; transform: translateY(-50%); }
+.mj-center-seatwind.w3 { left: 8px; top: 50%; transform: translateY(-50%); }
+.mj-center.compact.riichi .mj-center-sticks { display: none; }
+.mj-dora { display: inline-flex; gap: 2px; }
+.mj-dora-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.mj-dora-row small { color: var(--muted); font-size: 12px; }
+.mj-river.riichi .mj-tile.taken { opacity: 0.45; }
+.mj-ting.furiten { color: var(--bad); }
+.mj-switches { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 12px; }
+.mj-combo { display: inline-flex; gap: 1px; }
+.app-shell .mj-actions .mj-riichi-button { --rim: #ffd0d4; background: #e0505c; color: #fff; }
+.app-shell .mj-actions .mj-riichi-button.on { background: #6e1020; }
+.mj-fx.riichi { color: #ff8a9a; font-size: 60px; }
+.app-shell .gm-panel.mj-summary.riichi { gap: 10px; }
+.mj-win { padding: 8px 12px; background: var(--panel-2); }
+.mj-win-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; }
+.mj-win-head strong { font-size: 24px; font-weight: 400; }
+.mj-win-head b { color: var(--gold); font-size: 24px; font-weight: 400; }
+.mj-win-tiles { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; margin: 8px 0; }
+.mj-yaku { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 2px 16px; margin: 0; padding: 0; list-style: none; }
+.mj-yaku li { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; }
+.mj-yaku b { color: var(--gold); font-weight: 400; }
+.mj-win-dora { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin-top: 6px; color: var(--muted); font-size: 12px; }
+.mj-pao { color: var(--bad); }
+.mj-draw ul { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.mj-draw li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.mj-draw p { margin: 0 0 6px; color: var(--text); }
+.mj-sum-points { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin: 0; padding: 0; list-style: none; }
+.mj-sum-points li { display: flex; flex-direction: column; gap: 2px; padding: 6px 10px; background: var(--panel-2); }
+.mj-sum-points li.mine { box-shadow: inset 0 0 0 var(--px) var(--gold); }
+.mj-sum-points b { font-size: 24px; font-weight: 400; }
+.mj-sum-points .mj-sum-total { text-align: left; }
+.mj-status .mj-dora-row { margin-top: 2px; }
+@media (max-width: 639px) {
+  .mj-sum-points { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+.mj-hand-count { align-self: center; margin-left: 2px; padding: 0 3px; color: var(--text); background: rgba(14, 20, 36, 0.85); font-size: 12px; font-style: normal; }
+.mj-center.compact .mj-center-seatwind { display: none; }
+.mj-dora-top { display: inline-flex; align-items: center; }
+.mj-screen.mobile .mj-round > span.mj-dora-top { display: inline-flex; }
+/* 听牌提示放在自己那栏右边，不被中间的操作条挡住 */
+.mj-screen:not(.mobile) .mj-mine-bar .mj-ting { margin-left: auto; }

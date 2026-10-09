@@ -29,10 +29,31 @@ SCENES: dict[str, tuple[str, tuple[int, ...]]] = {
     ),
 }
 
+# 立直麻将：日式雀庄
+SCENES.update({
+    "jansou-night": (
+        "interior of a cozy Japanese mahjong parlor at night, several square automatic mahjong tables with green felt, "
+        "warm paper lanterns and a glowing neon sign window, wooden walls, shoji screens, tatami corner, quiet and cozy, no people, no text, wide view",
+        (61, 62, 63, 64),
+    ),
+    "jansou-day": (
+        "interior of a bright Japanese mahjong parlor on a sunny afternoon, sunlight through shoji paper screens, "
+        "square automatic mahjong tables with green felt, wooden floor, potted bonsai plant, a small tea set, calm and airy, no people, no text, wide view",
+        (71, 72, 73, 74),
+    ),
+})
+
 SPRITES: dict[str, tuple[str, int, int, bool]] = {
     "avatar": (
         "cute pixel art portrait of a friendly teahouse regular for a game avatar, head and shoulders, front view, big eyes, "
         "chinese style clothing, colorful, simple background removed",
+        32,
+        32,
+        True,
+    ),
+    "avatar-jp": (
+        "cute pixel art portrait of a friendly japanese mahjong club member for a game avatar, head and shoulders, front view, big eyes, "
+        "modern casual japanese clothing, colorful, simple background removed",
         32,
         32,
         True,
