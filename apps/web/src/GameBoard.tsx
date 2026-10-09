@@ -274,8 +274,17 @@ function GameBoard({ room, busy, error, notice, brand, connection, theme, themeT
     return map;
   }, [game.version, myMove]);
   const [hoverTile, setHoverTile] = useState<Tile | null>(null);
-  useEffect(() => setHoverTile(null), [game.version]);
-  const hoverTing = hoverTile !== null ? discardTing.get(kindOf(hoverTile)) : undefined;
+  // 出牌分两步：点一下只是选中（抬起来、显示打这张听什么），再点一次或点「打出」才打出去，免得点错。
+  const [selected, setSelected] = useState<Tile | null>(null);
+  // 定缺也先选一门，再点「确定」。
+  const [voidPick, setVoidPick] = useState<Suit | null>(null);
+  useEffect(() => {
+    setHoverTile(null);
+    setSelected(null);
+  }, [game.version]);
+  useEffect(() => setVoidPick(null), [game.handNo, stage]);
+  const previewTile = selected ?? hoverTile;
+  const hoverTing = previewTile !== null ? discardTing.get(kindOf(previewTile)) : undefined;
 
   // ---------- 动画：只在 version 变的时候 ----------
   const fx = useMemo(() => (game.version === firstVersion.current ? [] : fxFrom(game.events, game.version)), [game.version]);
@@ -308,6 +317,11 @@ function GameBoard({ room, busy, error, notice, brand, connection, theme, themeT
     send({ type: "CLAIM", action });
   }
   const discardTile = (tile: Tile) => { if (discards.includes(tile)) send({ type: "DISCARD", tile }); };
+  /** 点手里的牌：没选中就选中，点已经选中的那张才打出去。 */
+  const clickDiscard = (tile: Tile) => {
+    if (selected === tile) discardTile(tile);
+    else setSelected(tile);
+  };
 
   // 键盘：H 胡/自摸，P 碰，G 杠，Esc 过，N 下一盘
   useEffect(() => {
@@ -324,6 +338,10 @@ function GameBoard({ room, busy, error, notice, brand, connection, theme, themeT
       } else if (myMove) {
         if (key === "h" && tsumoOk) send({ type: "TSUMO" });
         else if (key === "g" && kongs.length === 1) send({ type: "KONG", tile: kongs[0]!.tile });
+        else if ((key === " " || key === "enter") && selected !== null) {
+          event.preventDefault();
+          discardTile(selected);
+        } else if (key === "escape") setSelected(null);
       } else if (stage === "handEnd" && playing && !spectating && key === "n" && !game.ready.includes(myId)) {
         send({ type: "READY" });
       }
@@ -381,7 +399,7 @@ function GameBoard({ room, busy, error, notice, brand, connection, theme, themeT
       headline = game.turnMode === "claimed" ? "碰完了：打一张" : "轮到你：打一张";
       detail = me.void && me.hand.some((tile) => suitOfTile(tile) === me.void)
         ? `手里还有${SUIT_NAMES[me.void]}子（缺门），要先打掉。`
-        : tsumoOk ? "可以自摸！" : "点一张牌打出去。";
+        : tsumoOk ? "可以自摸！" : "点一张牌选中，再点一次（或点「打出」）打出去。";
     } else {
       headline = `${nameOf(game.turn)} 出牌中`;
     }
@@ -578,19 +596,19 @@ function GameBoard({ room, busy, error, notice, brand, connection, theme, themeT
     const picked = swapPick.includes(tile);
     const canDiscard = discards.includes(tile);
     const isVoid = voidSuit !== null && suitOfTile(tile) === voidSuit;
-    const onClick = swapMode ? () => toggleSwap(tile) : canDiscard ? () => discardTile(tile) : undefined;
+    const onClick = swapMode ? () => toggleSwap(tile) : canDiscard ? () => clickDiscard(tile) : undefined;
     const ting = canDiscard ? discardTing.get(kindOf(tile)) : undefined;
     return (
       <TileView
         key={tile}
         tile={tile}
         scale={hs}
-        className={[extra, picked ? "picked" : "", canDiscard || swapMode ? "pickable" : myMove ? "locked" : "", isVoid && stage !== "swap" ? "void" : "", freshIn.has(tile) ? "fresh" : "", ting && ting.kinds.length > 0 ? "ting" : ""].join(" ")}
+        className={[extra, picked || selected === tile ? "picked" : "", canDiscard || swapMode ? "pickable" : myMove ? "locked" : "", isVoid && stage !== "swap" ? "void" : "", freshIn.has(tile) ? "fresh" : "", ting && ting.kinds.length > 0 ? "ting" : ""].join(" ")}
         onClick={onClick}
         disabled={busy}
         onPointerEnter={canDiscard ? () => setHoverTile(tile) : undefined}
         onPointerLeave={canDiscard ? () => setHoverTile(null) : undefined}
-        badge={swapMode && picked ? "换" : ting && ting.kinds.length > 0 ? "听" : undefined}
+        badge={swapMode && picked ? "换" : selected === tile ? "再点打出" : ting && ting.kinds.length > 0 ? "听" : undefined}
       />
     );
   };
@@ -611,10 +629,21 @@ function GameBoard({ room, busy, error, notice, brand, connection, theme, themeT
       return (
         <div className="mj-actions">
           {SUITS.map((suit) => (
-            <button key={suit} className={suit === suggestVoid ? "primary-button mj-void-button" : "quiet-button mj-void-button"} type="button" disabled={busy} onClick={() => send({ type: "VOID", suit })} style={{ "--suit": SUIT_COLOR[suit] } as CSSProperties}>
+            <button
+              key={suit}
+              className={["quiet-button mj-void-button", voidPick === suit ? "chosen" : ""].join(" ")}
+              type="button"
+              aria-pressed={voidPick === suit}
+              disabled={busy}
+              onClick={() => setVoidPick(suit)}
+              style={{ "--suit": SUIT_COLOR[suit] } as CSSProperties}
+            >
               缺{SUIT_NAMES[suit]}<small>{me.hand.filter((tile) => suitOfTile(tile) === suit).length} 张{suit === suggestVoid ? " · 推荐" : ""}</small>
             </button>
           ))}
+          <button className="primary-button" type="button" disabled={busy || voidPick === null} onClick={() => voidPick && send({ type: "VOID", suit: voidPick })}>
+            {voidPick ? `确定缺${SUIT_NAMES[voidPick]}` : "先选一门"}
+          </button>
           {secondsLeft !== null && <span className="mj-actions-time">{secondsLeft}s</span>}
         </div>
       );
@@ -630,7 +659,7 @@ function GameBoard({ room, busy, error, notice, brand, connection, theme, themeT
         </div>
       );
     }
-    if (myMove && (tsumoOk || kongs.length > 0)) {
+    if (myMove && (tsumoOk || kongs.length > 0 || selected !== null)) {
       return (
         <div className="mj-actions">
           {tsumoOk && <button className="primary-button mj-hu" type="button" disabled={busy} onClick={() => send({ type: "TSUMO" })}>自摸<small>H</small></button>}
@@ -639,7 +668,16 @@ function GameBoard({ room, busy, error, notice, brand, connection, theme, themeT
               <TileView tile={option.tile} scale={1} />{option.type === "concealedKong" ? "暗杠" : "加杠"}
             </button>
           ))}
-          <span className="mj-actions-hint">或者点一张牌打出去</span>
+          {selected !== null ? (
+            <>
+              <button className={tsumoOk || kongs.length > 0 ? "quiet-button mj-kong-button" : "primary-button mj-kong-button"} type="button" disabled={busy} onClick={() => discardTile(selected)}>
+                打出 <TileView tile={selected} scale={1} /><small>空格</small>
+              </button>
+              <button className="quiet-button" type="button" disabled={busy} onClick={() => setSelected(null)}>取消<small>Esc</small></button>
+            </>
+          ) : (
+            <span className="mj-actions-hint">或者选一张牌打出去</span>
+          )}
           {secondsLeft !== null && <span className="mj-actions-time">{secondsLeft}s</span>}
         </div>
       );

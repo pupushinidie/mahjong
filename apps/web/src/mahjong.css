@@ -678,3 +678,6 @@ button.mj-tile:disabled { cursor: default; }
   .app-shell .mj-variants { grid-template-columns: 1fr; }
   .app-shell .mj-hero { width: 100%; max-width: 512px; background-size: cover; }
 }
+
+/* 定缺：选中的那一门 */
+.app-shell .mj-actions .mj-void-button.chosen { --rim: var(--gold); --shade: #7a5410; color: var(--gold); background: #3a2c10; }
