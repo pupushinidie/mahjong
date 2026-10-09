@@ -34,6 +34,7 @@ export {
   botCommand,
   claimReady,
   createGame,
+  legalCommands,
   pendingSeats,
   redactGameForViewer,
   resolveClaim,

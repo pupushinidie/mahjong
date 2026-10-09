@@ -624,8 +624,8 @@ function payKong(ctx: Ctx, payee: number, payers: readonly number[], amount: num
   const deltas = emptyDeltas();
   for (const payer of payers) {
     state.kongLedger.push({ id, payer, payee, amount, transferred: false, refunded: false });
-    deltas[payer] -= amount;
-    deltas[payee] += amount;
+    deltas[payer]! -= amount;
+    deltas[payee]! += amount;
   }
   addLine(ctx, { kind: "kong", text, deltas });
   state.lastKong = { seat: payee, id };
@@ -642,8 +642,8 @@ function transferKong(ctx: Ctx, kongSeat: number, winner: number): void {
   if (amount === 0) return;
   for (const entry of entries) entry.transferred = true;
   const deltas = emptyDeltas();
-  deltas[kongSeat] -= amount;
-  deltas[winner] += amount;
+  deltas[kongSeat]! -= amount;
+  deltas[winner]! += amount;
   addLine(ctx, { kind: "transfer", text: `呼叫转移：${state.players[kongSeat]!.name} 的杠分转给 ${state.players[winner]!.name}`, deltas });
   ctx.events.push({ type: "Transfer", from: kongSeat, to: winner, amount });
 }
@@ -675,8 +675,8 @@ function settleTsumo(ctx: Ctx, seat: number): void {
   const points = result.points + (state.config.zimo === "base" ? 1 : 0);
   const deltas = emptyDeltas();
   for (const payer of payers) {
-    deltas[payer] -= points;
-    deltas[seat] += points;
+    deltas[payer]! -= points;
+    deltas[seat]! += points;
   }
   state.winOrder += 1;
   addLine(ctx, { kind: "hu", text: `${player.name} 自摸 ${result.title} ${result.counted} 番`, deltas });
@@ -695,8 +695,8 @@ function settleRon(ctx: Ctx, seat: number, claim: ClaimWindow): void {
   const how = claim.kind === "robKong" ? "robKong" : "ron";
   const result = evaluateHu([...player.hand.map(kindOf), kindOf(claim.tile)], player.melds, player.void, { how, afterKongDiscard: claim.afterKong }, state.config)!;
   const deltas = emptyDeltas();
-  deltas[claim.from] -= result.points;
-  deltas[seat] += result.points;
+  deltas[claim.from]! -= result.points;
+  deltas[seat]! += result.points;
   const verb = how === "robKong" ? "抢杠胡" : "点炮胡";
   addLine(ctx, { kind: "hu", text: `${player.name} ${verb}（${state.players[claim.from]!.name} 放炮）${result.title} ${result.counted} 番`, deltas });
   recordWin(ctx, seat, { tile: claim.tile, how, from: claim.from, fan: result.fan, counted: result.counted, items: result.items, title: result.title, points: result.points, payers: [claim.from], order: state.winOrder });
@@ -730,8 +730,8 @@ function endHand(ctx: Ctx, reason: HandSummary["reason"]): void {
       const deltas = emptyDeltas();
       for (const ledger of entries) {
         ledger.refunded = true;
-        deltas[ledger.payee] -= ledger.amount;
-        deltas[ledger.payer] += ledger.amount;
+        deltas[ledger.payee]! -= ledger.amount;
+        deltas[ledger.payer]! += ledger.amount;
       }
       addLine(ctx, { kind: "refund", text: `退税：${state.players[entry.seat]!.name} 没听牌，退还杠分`, deltas });
     }
@@ -740,8 +740,8 @@ function endHand(ctx: Ctx, reason: HandSummary["reason"]): void {
     for (const pig of status.filter((item) => item.pig)) {
       const deltas = emptyDeltas();
       for (const other of status.filter((item) => !item.pig)) {
-        deltas[pig.seat] -= pigPay;
-        deltas[other.seat] += pigPay;
+        deltas[pig.seat]! -= pigPay;
+        deltas[other.seat]! += pigPay;
       }
       if (deltas.some((delta) => delta !== 0)) addLine(ctx, { kind: "pig", text: `查花猪：${state.players[pig.seat]!.name} 手里还有缺门牌`, deltas });
     }
@@ -751,8 +751,8 @@ function endHand(ctx: Ctx, reason: HandSummary["reason"]): void {
       const deltas = emptyDeltas();
       for (const winner of tingSeats) {
         const amount = 2 ** cappedFan(winner.maxFan, state.config.cap);
-        deltas[loser.seat] -= amount;
-        deltas[winner.seat] += amount;
+        deltas[loser.seat]! -= amount;
+        deltas[winner.seat]! += amount;
       }
       if (deltas.some((delta) => delta !== 0)) addLine(ctx, { kind: "noTing", text: `查大叫：${state.players[loser.seat]!.name} 没听牌`, deltas });
     }

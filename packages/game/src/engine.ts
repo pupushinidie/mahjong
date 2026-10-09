@@ -12,6 +12,7 @@ import {
   type NewPlayer,
 } from "./sichuan.js";
 import { sichuanBotCommand } from "./sichuan-bot.js";
+import { canTsumo, discardable, kongOptions, pickSwapTiles } from "./sichuan.js";
 import type { GameCommand, GameState, SichuanOptions, Variant } from "./types.js";
 
 export type { NewPlayer };
@@ -59,3 +60,34 @@ export const redactGameForViewer = (state: GameState, viewerId: string): GameSta
 
 /** 决定点的标识；变了就重新计时。 */
 export const timerKey = (state: GameState) => `${state.handNo}:${state.step}`;
+
+/**
+ * 这位玩家现在能发的操作（网页按钮、测试用）。换三张和定缺只给一个默认选择；打牌给出每张能打的牌。
+ * 只用到自己能看到的信息，所以在 redactGameForViewer 之后的状态上也能用。
+ */
+export function legalCommands(state: GameState, playerId: string): GameCommand[] {
+  const seat = state.players.findIndex((player) => player.id === playerId);
+  if (seat < 0 || state.phase === "finished") return [];
+  const player = state.players[seat]!;
+  switch (state.stage) {
+    case "swap":
+      return player.swapChosen ? [] : [{ type: "SWAP", tiles: pickSwapTiles(player.hand) }];
+    case "void":
+      return player.voidChosen ? [] : (["m", "p", "s"] as const).map((suit) => ({ type: "VOID", suit }));
+    case "turn": {
+      if (state.turn !== seat) return [];
+      const commands: GameCommand[] = [];
+      if (canTsumo(state, seat)) commands.push({ type: "TSUMO" });
+      for (const option of kongOptions(state, seat)) commands.push({ type: "KONG", tile: option.tile });
+      for (const tile of discardable(state, seat)) commands.push({ type: "DISCARD", tile });
+      return commands;
+    }
+    case "claim": {
+      const options = state.claim?.options[seat];
+      if (!options || state.claim?.responses[seat] !== undefined) return [];
+      return [...options.map((action) => ({ type: "CLAIM" as const, action })), { type: "CLAIM", action: "pass" }];
+    }
+    case "handEnd":
+      return state.ready.includes(playerId) ? [] : [{ type: "READY" }];
+  }
+}
