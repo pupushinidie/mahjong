@@ -21,6 +21,7 @@ import {
   type RiichiState,
   type Tile,
 } from "@mahjong/game";
+import { selectionKey } from "@mahjong/game";
 import { art, coverSize, seatColor } from "./art.js";
 import { useConfirm } from "./confirm.js";
 import GameRules from "./GameRules.js";
@@ -29,6 +30,9 @@ import { socket } from "./socket.js";
 import { BAND, MOBILE_OPP_ROW, PLATE_W, useCountdown, useLayout } from "./table.js";
 import type { Theme } from "./theme.js";
 import { ROW_PITCH, TILE_H, TILE_W, tileLabel, TileView } from "./tiles.js";
+import { Coach, TipToast } from "./tutorial/Coach.js";
+import { useFirstTimeTips } from "./tutorial/tips.js";
+import { detectTips, gameIdOf, hintFor, RIICHI_TIPS, type Hint } from "./tutorialGame.js";
 
 interface RiichiBoardProps {
   readonly room: LobbyRoomSnapshot;
@@ -46,9 +50,17 @@ interface RiichiBoardProps {
   readonly watchId: string;
   readonly onWatch: (playerId: string) => void;
   readonly onLeave: () => void;
+  /** 以下几项见 GameBoard（教程用）。 */
+  readonly selfMemberId?: string;
+  readonly mode?: "online" | "tutorial" | "practice";
+  readonly finalActions?: ReactNode;
+  readonly sidePanel?: ReactNode;
+  readonly onSelection?: (key: string) => void;
 }
 
 type Rel = 0 | 1 | 2 | 3;
+/** 教程锚点里的相对位置名。 */
+const REL_NAME = ["me", "next", "across", "prev"] as const;
 const WINDS = ["东", "南", "西", "北"];
 const SUIT_WORD = { s: "索" };
 const tileName = (tile: Tile) => tileLabel(tile, SUIT_WORD);
@@ -77,6 +89,18 @@ function writeSwitch(key: Switch, on: boolean): void {
   } catch {
     // 无痕模式等：只在这一页有效
   }
+}
+
+function useWide(): boolean {
+  const query = "(min-width: 1280px)";
+  const [wide, setWide] = useState(() => window.matchMedia(query).matches);
+  useEffect(() => {
+    const list = window.matchMedia(query);
+    const update = () => setWide(list.matches);
+    list.addEventListener("change", update);
+    return () => list.removeEventListener("change", update);
+  }, []);
+  return wide;
 }
 
 function describeEvent(event: RiichiEvent, name: (seat: number) => string): string | null {
@@ -149,9 +173,9 @@ function seenCounts(game: RiichiState, mySeat: number): number[] {
 
 // ---------------------------------------------------------------------------
 
-function RiichiBoard({ room, busy, error, notice, brand, connection, theme, themeToggle, chat, onCommand, onRematch, onDissolve, watchId, onWatch, onLeave }: RiichiBoardProps) {
+function RiichiBoard({ room, busy, error, notice, brand, connection, theme, themeToggle, chat, onCommand, onRematch, onDissolve, watchId, onWatch, onLeave, selfMemberId, mode = "online", finalActions, sidePanel, onSelection }: RiichiBoardProps) {
   const game = room.game as RiichiState;
-  const member = room.members.find((candidate) => candidate.id === socket.id);
+  const member = room.members.find((candidate) => candidate.id === (selfMemberId ?? socket.id));
   const spectating = !member;
   const myId = member?.playerId ?? watchId;
   const mySeat = Math.max(0, game.players.findIndex((player) => player.id === myId));
@@ -171,6 +195,8 @@ function RiichiBoard({ room, busy, error, notice, brand, connection, theme, them
   const [tableRef, layout, tableBox] = useLayout();
   const { s, hs } = layout;
   const aka = game.config.aka;
+  // ≥1280 宝牌指示牌在右栏，窄一些在牌桌右上角的情况框里（教程锚点只挂在看得见的那个上）
+  const wide = useWide();
 
   const myMove = !spectating && playing && stage === "turn" && game.turn === mySeat;
   const claim = game.claim;
@@ -190,6 +216,7 @@ function RiichiBoard({ room, busy, error, notice, brand, connection, theme, them
     setHoverTile(null);
     setRiichiMode(false);
   }, [game.version]);
+  useEffect(() => onSelection?.(selectionKey({ riichiMode, selected })), [riichiMode, selected]);
   const pickable = riichiMode ? riichiTiles : discards;
   const doDiscard = (tile: Tile) => { if (pickable.includes(tile)) send({ type: "DISCARD", tile, ...(riichiMode ? { riichi: true } : {}) }); };
   const clickTile = (tile: Tile) => (selected === tile ? doDiscard(tile) : setSelected(tile));
@@ -240,7 +267,7 @@ function RiichiBoard({ room, busy, error, notice, brand, connection, theme, them
   });
   const autoSent = useRef(-1);
   useEffect(() => {
-    if (spectating || !playing || busy || autoSent.current === game.version) return;
+    if (spectating || !playing || busy || mode === "tutorial" || autoSent.current === game.version) return;
     let command: GameCommand | null = null;
     if (switches.autoWin && myClaim?.includes("ron")) command = { type: "CLAIM", action: "ron" };
     else if (switches.autoWin && tsumoOk) command = { type: "TSUMO" };
@@ -292,6 +319,10 @@ function RiichiBoard({ room, busy, error, notice, brand, connection, theme, them
       if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
       if (event.metaKey || event.ctrlKey || event.altKey) return;
       const key = event.key.toLowerCase();
+      if (key === "t" && canAsk) {
+        ask();
+        return;
+      }
       if (myClaim) {
         if (key === "h" && myClaim.includes("ron")) void respond("ron");
         else if (key === "p" && myClaim.includes("pon") && (claim!.ponOptions[mySeat]?.length ?? 0) === 1) void respond("pon", claim!.ponOptions[mySeat]![0]);
@@ -318,6 +349,26 @@ function RiichiBoard({ room, busy, error, notice, brand, connection, theme, them
   });
 
   const needMe = !spectating && playing && (myMove || Boolean(myClaim));
+
+  // 「问咕噜嘎」：只有自己和人机时（练习局，或者一个人开的房间，空座都是人机）
+  const botsOnly = room.members.length === 1 && member !== undefined;
+  const canAsk = !spectating && !me.auto && needMe && (mode === "practice" || (mode === "online" && botsOnly));
+  const hintKey = game.handNo * 10000 + game.step;
+  const [coachHint, setCoachHint] = useState<{ key: number; hint: Hint } | null>(null);
+  function ask() {
+    if (!canAsk) return;
+    const next = hintFor(game, myId);
+    const command = next.command;
+    if (command?.type === "DISCARD") {
+      const riichi = "riichi" in command && command.riichi === true;
+      setRiichiMode(riichi);
+      setSelected(command.tile);
+    }
+    setCoachHint({ key: hintKey, hint: next });
+  }
+  const shownHint = coachHint && coachHint.key === hintKey && canAsk ? coachHint.hint : null;
+  const askButton = canAsk ? <button className="quiet-button mj-ask" type="button" onClick={ask} data-tutorial="btn-ask" title="咕噜嘎告诉你它会怎么打、为什么">问咕噜嘎<small>T</small></button> : null;
+  const tips = useFirstTimeTips(gameIdOf("riichi"), game.version, () => detectTips(game, myId), RIICHI_TIPS, mode === "online" && !spectating);
   useEffect(() => {
     const base = "立直麻将 · 在线对战";
     const update = () => { document.title = needMe && document.hidden ? `【轮到你】${base}` : base; };
@@ -398,7 +449,7 @@ function RiichiBoard({ room, busy, error, notice, brand, connection, theme, them
     const style: CSSProperties = { left: cx - w / 2, top: cy - riverBoxH / 2, width: w, height: riverBoxH, transform: rect.rot ? `rotate(${rect.rot}deg)` : undefined, "--s": s } as CSSProperties;
     const river = game.players[seat]!.river;
     return (
-      <div key={`river-${seat}`} className={`mj-river riichi r${rel}`} style={style}>
+      <div key={`river-${seat}`} className={`mj-river riichi r${rel}`} style={style} data-tutorial={`river-${REL_NAME[rel]}`}>
         {river.map((entry, index) => (
           <TileView
             key={index}
@@ -445,7 +496,7 @@ function RiichiBoard({ room, busy, error, notice, brand, connection, theme, them
     const rel = relOf(seat);
     const active = playing && ((stage === "turn" && game.turn === seat) || (stage === "claim" && claim?.from === seat));
     return (
-      <div className={["mj-plate", `p${rel}`, active ? "active" : ""].join(" ")} style={{ "--seat": seatColor(rel) } as CSSProperties}>
+      <div className={["mj-plate", `p${rel}`, active ? "active" : ""].join(" ")} style={{ "--seat": seatColor(rel) } as CSSProperties} data-tutorial={`plate-${REL_NAME[rel]}`}>
         <div className="mj-plate-top">
           <img className="mj-avatar" src={art.riichiAvatar(seat)} alt="" />
           <strong title={player.name}>{nameOf(seat)}{seat === mySeat && spectating ? "（观战视角）" : ""}</strong>
@@ -545,12 +596,13 @@ function RiichiBoard({ room, busy, error, notice, brand, connection, theme, them
         onPointerEnter={canPick ? () => setHoverTile(tile) : undefined}
         onPointerLeave={canPick ? () => setHoverTile(null) : undefined}
         badge={selected === tile ? (riichiMode ? "再点立直" : "再点打出") : ting ? "听" : undefined}
+        anchor={`tile:${tile}`}
       />
     );
   };
 
-  const comboButton = (action: "chi" | "pon", tiles: [Tile, Tile], key: string, primary: boolean) => (
-    <button key={key} className={primary ? "primary-button mj-kong-button" : "quiet-button mj-kong-button"} type="button" disabled={busy} onClick={() => void respond(action, tiles)}>
+  const comboButton = (action: "chi" | "pon", tiles: [Tile, Tile], key: string, primary: boolean, anchor?: string) => (
+    <button key={key} className={primary ? "primary-button mj-kong-button" : "quiet-button mj-kong-button"} type="button" disabled={busy} onClick={() => void respond(action, tiles)} data-tutorial={anchor}>
       {ACTION_TEXT[action]}
       <span className="mj-combo">{tiles.map((tile) => <TileView key={tile} tile={tile} scale={1} redFives={aka} />)}</span>
     </button>
@@ -563,11 +615,12 @@ function RiichiBoard({ room, busy, error, notice, brand, connection, theme, them
       const pons = myClaim.includes("pon") ? claim.ponOptions[mySeat] ?? [] : [];
       return (
         <div className="mj-actions">
-          {myClaim.includes("ron") && <button className="primary-button mj-hu" type="button" disabled={busy} onClick={() => void respond("ron")}>荣和<small>H</small></button>}
-          {myClaim.includes("minkan") && <button className="primary-button" type="button" disabled={busy} onClick={() => void respond("minkan")}>杠<small>G</small></button>}
-          {pons.map((tiles, index) => comboButton("pon", tiles, `pon-${index}`, true))}
-          {chis.map((tiles, index) => comboButton("chi", tiles, `chi-${index}`, true))}
-          <button className="quiet-button" type="button" disabled={busy} onClick={() => void respond("pass")}>过<small>Esc</small></button>
+          {askButton}
+          {myClaim.includes("ron") && <button className="primary-button mj-hu" type="button" disabled={busy} onClick={() => void respond("ron")} data-tutorial="btn-ron">荣和<small>H</small></button>}
+          {myClaim.includes("minkan") && <button className="primary-button" type="button" disabled={busy} onClick={() => void respond("minkan")} data-tutorial="btn-minkan">杠<small>G</small></button>}
+          {pons.map((tiles, index) => comboButton("pon", tiles, `pon-${index}`, true, index === 0 ? "btn-pon" : undefined))}
+          {chis.map((tiles, index) => comboButton("chi", tiles, `chi-${index}`, true, index === 0 ? "btn-chi" : undefined))}
+          <button className="quiet-button" type="button" disabled={busy} onClick={() => void respond("pass")} data-tutorial="btn-pass">过<small>Esc</small></button>
           {secondsLeft !== null && <span className="mj-actions-time">{secondsLeft}s</span>}
         </div>
       );
@@ -575,21 +628,22 @@ function RiichiBoard({ room, busy, error, notice, brand, connection, theme, them
     if (myMove && (tsumoOk || kans.length > 0 || riichiTiles.length > 0 || kyuushu || selected !== null)) {
       return (
         <div className="mj-actions">
-          {tsumoOk && <button className="primary-button mj-hu" type="button" disabled={busy} onClick={() => send({ type: "TSUMO" })}>自摸<small>H</small></button>}
+          {askButton}
+          {tsumoOk && <button className="primary-button mj-hu" type="button" disabled={busy} onClick={() => send({ type: "TSUMO" })} data-tutorial="btn-tsumo">自摸<small>H</small></button>}
           {riichiTiles.length > 0 && (
-            <button className={riichiMode ? "primary-button mj-riichi-button on" : "primary-button mj-riichi-button"} type="button" disabled={busy} onClick={() => { setRiichiMode(!riichiMode); setSelected(null); }}>
+            <button className={riichiMode ? "primary-button mj-riichi-button on" : "primary-button mj-riichi-button"} type="button" disabled={busy} onClick={() => { setRiichiMode(!riichiMode); setSelected(null); }} data-tutorial="btn-riichi">
               {riichiMode ? "不立直了" : "立直"}<small>R</small>
             </button>
           )}
-          {kans.map((option) => (
-            <button key={option.tile} className="primary-button mj-kong-button" type="button" disabled={busy} onClick={() => send({ type: "KONG", tile: option.tile })}>
+          {kans.map((option, index) => (
+            <button key={option.tile} className="primary-button mj-kong-button" type="button" disabled={busy} onClick={() => send({ type: "KONG", tile: option.tile })} data-tutorial={index === 0 ? "btn-kong-self" : undefined}>
               <TileView tile={option.tile} scale={1} redFives={aka} />{option.type === "ankan" ? "暗杠" : "加杠"}
             </button>
           ))}
-          {kyuushu && <button className="quiet-button" type="button" disabled={busy} onClick={() => void declareKyuushu()}>九种九牌</button>}
+          {kyuushu && <button className="quiet-button" type="button" disabled={busy} onClick={() => void declareKyuushu()} data-tutorial="btn-kyuushu">九种九牌</button>}
           {selected !== null ? (
             <>
-              <button className="primary-button mj-kong-button" type="button" disabled={busy} onClick={() => doDiscard(selected)}>
+              <button className="primary-button mj-kong-button" type="button" disabled={busy} onClick={() => doDiscard(selected)} data-tutorial="btn-discard">
                 {riichiMode ? "立直，打出" : "打出"} <TileView tile={selected} scale={1} redFives={aka} /><small>空格</small>
               </button>
               <button className="quiet-button" type="button" disabled={busy} onClick={() => setSelected(null)}>取消<small>Esc</small></button>
@@ -610,7 +664,7 @@ function RiichiBoard({ room, busy, error, notice, brand, connection, theme, them
     if (!info) return myMove && [...discardWaits.values()].some((value) => value.length > 0) ? <span className="mj-ting muted">标「听」的牌打出去就听牌</span> : null;
     if (info.length === 0) return previewWaits ? <span className="mj-ting muted">打这张不听牌</span> : null;
     return (
-      <span className={furiten && !previewWaits ? "mj-ting furiten" : "mj-ting"}>
+      <span className={furiten && !previewWaits ? "mj-ting furiten" : "mj-ting"} data-tutorial="ting">
         {previewWaits ? "打这张听：" : furiten ? "振听！听：" : "听："}
         {info.map((item) => (
           <span key={item.kind} className={left(item.kind) === 0 ? "mj-ting-kind empty" : "mj-ting-kind"} title={`${kindName(item.kind)}：还剩 ${left(item.kind)} 张（按你看得到的牌算）${item.yaku ? "" : "，荣和没有役（只能自摸或立直）"}`}>
@@ -632,7 +686,7 @@ function RiichiBoard({ room, busy, error, notice, brand, connection, theme, them
   );
 
   const centerBox = (
-    <div className={c < 140 ? "mj-center compact riichi" : "mj-center riichi"} style={{ left: d, top: d, width: c, height: c }}>
+    <div className={c < 140 ? "mj-center compact riichi" : "mj-center riichi"} style={{ left: d, top: d, width: c, height: c }} data-tutorial="center">
       <span className="mj-center-hand"><b>{WINDS[game.roundWind]}{game.roundIndex}</b> 局</span>
       <span className="mj-center-sticks">{game.honba} 本场 · 供托 {game.kyoutaku / 1000}</span>
       <span className="mj-center-wall"><small>余</small><b>{game.wallCount}</b></span>
@@ -650,7 +704,7 @@ function RiichiBoard({ room, busy, error, notice, brand, connection, theme, them
     <div className="mj-status-mini">
       <strong>{headline}</strong>
       {secondsLeft !== null && playing && (needMe || stage === "handEnd") && <b className={secondsLeft <= 5 ? "low" : ""}>{secondsLeft}s</b>}
-      {!layout.mobile && <span className="mj-dora-row"><small>宝牌指示</small>{doraStrip(2)}</span>}
+      {!layout.mobile && <span className="mj-dora-row" data-tutorial={wide ? undefined : "dora"}><small>宝牌指示</small>{doraStrip(2)}</span>}
       {(error || shownNotice) && <small className={error ? "error" : ""}>{error || shownNotice}</small>}
     </div>
   );
@@ -664,12 +718,12 @@ function RiichiBoard({ room, busy, error, notice, brand, connection, theme, them
         <div className="mj-round">
           <span>立直麻将 · {game.config.length === "hanchan" ? "半庄战" : "东风战"}</span>
           <span><b>{roundLabel({ ...game, honba: 0 })}</b>{game.honba > 0 ? ` ${game.honba} 本场` : ""}</span>
-          {layout.mobile && <span className="mj-dora-top" title="宝牌指示牌">{doraStrip(1)}</span>}
+          {layout.mobile && <span className="mj-dora-top" title="宝牌指示牌" data-tutorial="dora">{doraStrip(1)}</span>}
         </div>
         <div className={menu ? "mj-topbar-right open" : "mj-topbar-right"} onClick={() => layout.mobile && setMenu(false)}>
           {themeToggle}
           <GameRules variant="riichi" />
-          <GameRoomMenu room={room} />
+          {mode === "online" && <GameRoomMenu room={room} />}
           {isHost && <button className="quiet-button danger" type="button" onClick={onDissolve}>解散</button>}
           <button className="quiet-button mj-drawer-toggle" type="button" aria-expanded={drawer} onClick={() => setDrawer(!drawer)}>记录 / 聊天{unread > 0 ? ` · ${unread}` : ""}</button>
           {connection}
@@ -692,11 +746,12 @@ function RiichiBoard({ room, busy, error, notice, brand, connection, theme, them
           <section className={["mj-mine", myMove ? "active" : ""].join(" ")} style={{ "--hs": hs, "--s": s } as CSSProperties}>
             <div className="mj-mine-bar">
               {plate(mySeat)}
+              {actionBar ? null : askButton}
               {layout.mobile ? statusMini : tingLine}
             </div>
             <div className="mj-mine-row">
               {actionBar}
-              <span className="mj-hand">
+              <span className="mj-hand" data-tutorial="hand">
                 {handTiles.map((tile) => myTile(tile))}
                 {me.drawn !== null && me.drawn >= 0 && <span className="mj-drawn-gap">{myTile(me.drawn, "drawn")}</span>}
               </span>
@@ -720,14 +775,15 @@ function RiichiBoard({ room, busy, error, notice, brand, connection, theme, them
           <section className="mj-panel mj-status">
             <h2>{headline}</h2>
             {detail && <p>{detail}</p>}
-            <span className="mj-dora-row"><small>宝牌指示牌</small>{doraStrip(2)}</span>
+            <span className="mj-dora-row" data-tutorial={wide ? "dora" : undefined}><small>宝牌指示牌</small>{doraStrip(2)}</span>
             {secondsLeft !== null && playing && (needMe || stage === "handEnd") && <span className={secondsLeft <= 5 ? "mj-timer low" : "mj-timer"}>{secondsLeft}s</span>}
-            {!spectating && playing && stage !== "handEnd" && (
+            {!spectating && playing && stage !== "handEnd" && mode === "online" && (
               <button className="quiet-button mj-auto-toggle" type="button" onClick={() => send({ type: "AUTO", on: !me.auto })}>{me.auto ? "取消托管" : "托管"}</button>
             )}
             {stage === "handEnd" && playing && hideSummary && <button className="primary-button" type="button" onClick={() => setHideSummary(false)}>看结算</button>}
             {(error || shownNotice) && <p className={error ? "mj-feedback error" : "mj-feedback"} role={error ? "alert" : "status"}>{error || shownNotice}</p>}
           </section>
+          {sidePanel}
           <section className="mj-panel mj-scores">
             {game.players.map((player, seat) => (
               <div key={player.id} className={seat === mySeat ? "mine" : ""}>
@@ -737,7 +793,7 @@ function RiichiBoard({ room, busy, error, notice, brand, connection, theme, them
               </div>
             ))}
           </section>
-          {!spectating && (
+          {!spectating && mode !== "tutorial" && (
             <section className="mj-panel mj-switches">
               {SWITCHES.map((item) => (
                 <button key={item.key} type="button" className={switches[item.key] ? "room-setting on" : "room-setting"} aria-pressed={switches[item.key]} title={item.hint} onClick={() => toggleSwitch(item.key)}>
@@ -760,7 +816,22 @@ function RiichiBoard({ room, busy, error, notice, brand, connection, theme, them
       {showSummary && game.phase === "playing" && (
         <RiichiSummary game={game} mySeat={mySeat} spectating={spectating} nameOf={nameOf} secondsLeft={secondsLeft} busy={busy} onReady={() => send({ type: "READY" })} onHide={() => setHideSummary(true)} />
       )}
-      {game.phase === "finished" && <RiichiFinalDialog game={game} room={room} mySeat={mySeat} spectating={spectating} nameOf={nameOf} onRematch={onRematch} onLeave={onLeave} />}
+      {game.phase === "finished" && <RiichiFinalDialog game={game} room={room} mySeat={mySeat} spectating={spectating} nameOf={nameOf} onRematch={onRematch} onLeave={onLeave} actions={finalActions} selfMemberId={selfMemberId} />}
+      {shownHint && (
+        <Coach
+          bubble
+          view={{
+            key: `hint-${game.version}`,
+            say: shownHint.say,
+            ...(shownHint.note ? { note: shownHint.note } : {}),
+            anchor: shownHint.anchor,
+            focus: false,
+            face: "think",
+            actions: <button className="quiet-button" type="button" onClick={() => setCoachHint(null)}>知道了</button>,
+          }}
+        />
+      )}
+      {tips.tip && <TipToast tip={tips.tip} onClose={tips.dismiss} onNever={tips.never} />}
       {confirmDialog}
     </div>
   );
@@ -783,6 +854,8 @@ function RiichiSummary({ game, mySeat, spectating, nameOf, secondsLeft, busy, on
   const result = game.result!;
   const ready = game.ready.includes(game.players[mySeat]!.id);
   const aka = game.config.aka;
+  // 手机上和牌的牌按 1 倍画，结算框才放得下
+  const big = window.innerWidth < 640 ? 1 : 2;
   const title = result.wins.length > 0
     ? result.wins.length > 1 ? `${result.wins.length} 家和` : result.wins[0]!.how === "tsumo" ? "自摸" : "荣和"
     : DRAW_TEXT[result.draw!.kind];
@@ -801,14 +874,14 @@ function RiichiSummary({ game, mySeat, spectating, nameOf, secondsLeft, busy, on
             </div>
             <div className="mj-win-tiles">
               {win.melds.map((meld, k) => (
-                <span key={k} className="mj-meld">{meld.tiles.map((tile, t) => <TileView key={t} tile={meld.type === "ankan" && (t === 0 || t === 3) ? -1 : tile} scale={2} redFives={aka} />)}</span>
+                <span key={k} className="mj-meld">{meld.tiles.map((tile, t) => <TileView key={t} tile={meld.type === "ankan" && (t === 0 || t === 3) ? -1 : tile} scale={big} redFives={aka} />)}</span>
               ))}
               <span className="mj-hand-row">
-                {win.hand.filter((tile) => tile !== win.tile).map((tile) => <TileView key={tile} tile={tile} scale={2} redFives={aka} />)}
+                {win.hand.filter((tile) => tile !== win.tile).map((tile) => <TileView key={tile} tile={tile} scale={big} redFives={aka} />)}
               </span>
-              <TileView tile={win.tile} scale={2} redFives={aka} className="won" badge={win.how === "tsumo" ? "自摸" : "荣"} />
+              <TileView tile={win.tile} scale={big} redFives={aka} className="won" badge={win.how === "tsumo" ? "自摸" : "荣"} />
             </div>
-            <ul className="mj-yaku">
+            <ul className="mj-yaku" data-tutorial={index === 0 ? "summary-yaku" : undefined}>
               {win.yaku.map((item, k) => (
                 <li key={k}><span>{item.name}</span><b>{item.yakuman ? (item.han > 1 ? `${item.han} 倍役满` : "役满") : `${item.han} 番`}</b></li>
               ))}
@@ -841,7 +914,7 @@ function RiichiSummary({ game, mySeat, spectating, nameOf, secondsLeft, busy, on
             )}
           </div>
         )}
-        <ol className="mj-sum-points">
+        <ol className="mj-sum-points" data-tutorial="summary-points">
           {game.players.map((player, seat) => (
             <li key={player.id} className={seat === mySeat ? "mine" : ""}>
               <span>{nameOf(seat)}</span>
@@ -853,7 +926,7 @@ function RiichiSummary({ game, mySeat, spectating, nameOf, secondsLeft, busy, on
         <footer>
           <span className="mj-muted">{result.gameOver ? `半庄结束：${result.gameOver}` : `下一局：${roundLabel(game)}${result.renchan ? "（连庄）" : ""}`}</span>
           {final ? null : !spectating ? (
-            <button className="primary-button" type="button" disabled={busy || ready} onClick={onReady}>
+            <button className="primary-button" type="button" disabled={busy || ready} onClick={onReady} data-tutorial="btn-ready">
               {ready ? `等其他人 ${game.ready.length}/4` : "下一局"}{secondsLeft !== null && <small>{secondsLeft}s</small>}
             </button>
           ) : (
@@ -865,7 +938,7 @@ function RiichiSummary({ game, mySeat, spectating, nameOf, secondsLeft, busy, on
   );
 }
 
-function RiichiFinalDialog({ game, room, mySeat, spectating, nameOf, onRematch, onLeave }: {
+function RiichiFinalDialog({ game, room, mySeat, spectating, nameOf, onRematch, onLeave, actions, selfMemberId }: {
   game: RiichiState;
   room: LobbyRoomSnapshot;
   mySeat: number;
@@ -873,10 +946,12 @@ function RiichiFinalDialog({ game, room, mySeat, spectating, nameOf, onRematch, 
   nameOf: (seat: number) => string;
   onRematch: (accept: boolean) => void;
   onLeave: () => void;
+  actions?: ReactNode | undefined;
+  selfMemberId?: string | undefined;
 }) {
   const result = game.finalResult!;
   const [showLast, setShowLast] = useState(false);
-  const accepted = room.rematch?.acceptedIds.includes(socket.id ?? "") ?? false;
+  const accepted = room.rematch?.acceptedIds.includes(selfMemberId ?? socket.id ?? "") ?? false;
   const order = game.players.map((_, seat) => seat).sort((a, b) => result.ranks[a]! - result.ranks[b]!);
   const myRank = result.ranks[mySeat]!;
   const title = spectating ? `${nameOf(order[0]!)} 第一` : myRank === 1 ? "你是第一名！" : `你是第 ${myRank} 名`;
@@ -899,7 +974,9 @@ function RiichiFinalDialog({ game, room, mySeat, spectating, nameOf, onRematch, 
           ))}
         </ol>
         {game.result && <button className="quiet-button" type="button" onClick={() => setShowLast(true)}>看最后一局结算</button>}
-        {spectating ? (
+        {actions ? (
+          <div className="gm-panel-actions mj-final-actions">{actions}</div>
+        ) : spectating ? (
           <div className="mj-rematch">
             <span>{room.rematch ? `等玩家决定要不要再来一局（${room.rematch.acceptedIds.length}/${room.members.length}）` : "对局结束"}</span>
             <div className="gm-panel-actions"><button className="quiet-button" type="button" onClick={onLeave}>离开观战</button></div>

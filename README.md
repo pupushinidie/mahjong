@@ -89,6 +89,17 @@ npm workspaces 单仓库：
 连续超时 2 次转托管（牌桌上点「取消托管」接回）；掉线的人 1 秒后由机器人代打，用原昵称和房间码回来接上。机器人：向听数贪心（先打缺门、再按向听数和有效牌），碰杠不增加向听数就做，能胡就胡。
 立直的机器人：向听数贪心（七对子、国士也算；尽量留宝牌和红五，先打客风字牌），役牌能碰就碰，其他吃碰要「副露以后还有役」并且向听数减少，听牌就立直，有人立直而自己向听数 ≥ 2 时先打现物，九种九牌就流局，能和就和。
 
+## 新手教程
+
+站内统一做法（`~/projects/pipeline/handbook/tutorial-notes.md`，欲罢不能是参考版）：剧本局 + 练习局「问咕噜嘎」+ 第一次小贴士。四川、立直各一份，本机记录分开（`gm-tutorial-mahjong-sichuan` / `gm-tutorial-mahjong-riichi`）。
+
+- 剧本：`packages/game/src/tutorial.ts`（`SICHUAN_STEPS` 30 步、`RIICHI_STEPS` 27 步），牌墙全部按剧本摆，单测 `tutorial.test.ts`（走完每一步合法、牌数守恒、关键几幕的番数点数、练习局人机打完）。
+  - 四川（一盘血战到底）：换三张（定死给对家）→ 定缺万 → 先打缺门 → 碰 → 听牌 → 暗杠下雨 → 咕噜二号自摸下桌 → 你点炮胡 3 番 → 快进到牌摸完（`FAST_FORWARD`：只挪牌的位置）→ 花猪、查大叫。
+  - 立直（两局）：东 1 局吃红 5 万、碰中、荣和 3900；东 2 局快进到中盘，立直（振听）、3 索不能荣和、一发自摸满贯。
+- 网页：`apps/web/src/tutorial/`（共用教练层，从 cantstop 复制没改）、`TutorialMode.tsx`、`tutorialGame.ts`（「问咕噜嘎」的说法、小贴士）。GameBoard / RiichiBoard 加了 `selfMemberId`、`mode`、`finalActions`、`sidePanel`、`onSelection`，锚点都是 `data-tutorial`。
+- 入口：首页按选中的玩法出邀请卡，等候房间按房间的玩法出；`?tutorial=sichuan` / `?tutorial=riichi` 直接打开。练习局：四川 1 盘、立直东风战，「问咕噜嘎」键盘 T；只有自己和机器人时（一个人开的房间）真对局里也有。
+- 走查：`~/projects/qa-reports/tools/tut-mahjong.mjs`（`VARIANT=sichuan|riichi`，flow / skip / waiting / room）。
+
 ## 美术
 
 - 牌面：代码画的像素牌（`art/tiles.py`，20×32，牌面 + 4 像素牌身厚度）。牌面上的字用繁体（萬、東、發，他 2026-10-09 定的），Fusion Pixel 12px 写，只按整数倍显示。一条的小鸟是代码画的。字牌、红五也已经画好，给立直用。

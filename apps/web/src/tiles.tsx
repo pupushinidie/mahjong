@@ -51,10 +51,12 @@ interface TileProps {
   readonly title?: string | undefined;
   readonly badge?: ReactNode | undefined;
   readonly style?: CSSProperties | undefined;
+  /** 新手教程的高亮锚点（data-tutorial）。 */
+  readonly anchor?: string | undefined;
 }
 
 /** 一张牌。能点的是 button，其他是 span。 */
-export function TileView({ tile, scale, redFives, sideways, className, onClick, onPointerEnter, onPointerLeave, disabled, title, badge, style }: TileProps) {
+export function TileView({ tile, scale, redFives, sideways, className, onClick, onPointerEnter, onPointerLeave, disabled, title, badge, style, anchor }: TileProps) {
   const sprite = <span className="mj-sprite" style={spriteStyle(spriteIndex(tile, redFives), scale)} />;
   const classes = ["mj-tile", sideways ? "sideways" : "", tile === null || tile < 0 ? "back" : "", className ?? ""].join(" ");
   const box: CSSProperties = sideways
@@ -69,13 +71,13 @@ export function TileView({ tile, scale, redFives, sideways, className, onClick, 
   );
   if (onClick) {
     return (
-      <button type="button" className={classes} style={box} onClick={onClick} disabled={disabled} title={label} aria-label={label} onPointerEnter={onPointerEnter} onPointerLeave={onPointerLeave}>
+      <button type="button" className={classes} style={box} onClick={onClick} disabled={disabled} title={label} aria-label={label} onPointerEnter={onPointerEnter} onPointerLeave={onPointerLeave} data-tutorial={anchor}>
         {inner}
       </button>
     );
   }
   return (
-    <span className={classes} style={box} title={label} aria-label={label} role="img" onPointerEnter={onPointerEnter} onPointerLeave={onPointerLeave}>
+    <span className={classes} style={box} title={label} aria-label={label} role="img" onPointerEnter={onPointerEnter} onPointerLeave={onPointerLeave} data-tutorial={anchor}>
       {inner}
     </span>
   );

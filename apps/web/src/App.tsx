@@ -12,6 +12,10 @@ import { socket } from "./socket.js";
 import { ThemeToggle, useTheme } from "./theme.js";
 import { TileView } from "./tiles.js";
 import { useVoice } from "./voice.js";
+import { TutorialInvite } from "./tutorial/Invite.js";
+import { readTutorial } from "./tutorial/storage.js";
+import { gameIdOf } from "./tutorialGame.js";
+import TutorialMode from "./TutorialMode.js";
 
 type EntryMode = "create" | "join";
 
@@ -56,6 +60,28 @@ function App() {
   // 观战时从谁的座位看（默认第一位玩家）。
   const [watchId, setWatchId] = useState("");
   const voice = useVoice(room);
+
+  // 新手教程：首页（按选中的玩法）或等候房间（按房间的玩法）点进来；地址带 ?tutorial=sichuan / riichi 时直接打开
+  const [tutorialOpen, setTutorialOpen] = useState<Variant | null>(() => {
+    const value = new URLSearchParams(window.location.search).get("tutorial");
+    return value === null ? null : value === "riichi" ? "riichi" : "sichuan";
+  });
+  function closeTutorial() {
+    setTutorialOpen(null);
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("tutorial")) {
+      params.delete("tutorial");
+      const query = params.toString();
+      window.history.replaceState(null, "", `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`);
+    }
+  }
+  // 在等候房间里看教程时房主开局了：回到牌桌，免得这一步超时转托管
+  useEffect(() => {
+    if (tutorialOpen && room?.status === "playing") {
+      closeTutorial();
+      setNotice("对局开始了，教程先停在这里。");
+    }
+  }, [tutorialOpen, room?.status]);
 
   // 「房间已创建」「房间码已复制」这类临时提示 4 秒后自动消失，不一直挂在页面上。
   useEffect(() => {
@@ -234,6 +260,14 @@ function App() {
     }
   }
 
+  if (tutorialOpen && room?.status !== "playing") {
+    return (
+      <main className="app-shell mj-game">
+        <TutorialMode key={tutorialOpen} variant={tutorialOpen} name={name} brand={<Brand />} themeToggle={themeToggle} theme={theme} waitingRoom={room?.code} onExit={closeTutorial} />
+      </main>
+    );
+  }
+
   if (room?.status === "playing" && room.game) {
     const players = room.game.players;
     const watched = players.some((player) => player.id === watchId) ? watchId : players[0]!.id;
@@ -284,6 +318,15 @@ function App() {
           onKick={kickMember}
           onDissolve={dissolveRoom}
           chat={<RoomChat room={room} voice={voice} />}
+          tutorial={
+            <TutorialInvite
+              record={readTutorial(gameIdOf(room.options.variant))}
+              title="等人的时候，先学一下？"
+              text="咕噜嘎带你在真牌桌上打一盘，不会离开房间，房主一开局就自动回来。"
+              again="新手教程"
+              onOpen={() => setTutorialOpen(room.options.variant)}
+            />
+          }
         />
         {confirmDialog}
       </main>
@@ -325,6 +368,14 @@ function App() {
               </button>
             ))}
           </div>
+          <TutorialInvite
+            key={variant}
+            record={readTutorial(gameIdOf(variant))}
+            title="第一次玩？10 分钟学会"
+            text={`咕噜嘎在真牌桌上带你打一盘${variant === "riichi" ? "立直麻将" : "四川麻将"}，学完和人机练一局。`}
+            again={`再看一遍${variant === "riichi" ? "立直" : "四川"}新手教程`}
+            onOpen={() => setTutorialOpen(variant)}
+          />
           <div className="mj-hero" style={{ backgroundImage: `url(${variant === "riichi" ? (theme === "day" ? art.riichiDay : art.riichiNight) : theme === "day" ? art.sceneDay : art.sceneNight})` }}>
             <div className="mj-showcase" aria-hidden="true">
               {SHOWCASE.map((tile) => <TileView key={tile} tile={tile} scale={2} />)}
@@ -533,6 +584,7 @@ function RoomView({
   onKick,
   onDissolve,
   chat,
+  tutorial,
 }: {
   room: LobbyRoomSnapshot;
   busy: boolean;
@@ -544,6 +596,7 @@ function RoomView({
   onKick: (memberId: string) => void;
   onDissolve: () => void;
   chat: ReactNode;
+  tutorial?: ReactNode;
 }) {
   const { isHost, spectating } = roomRole(room);
   const openSeats = Math.max(0, SEAT_COUNT - room.members.length);
@@ -557,6 +610,7 @@ function RoomView({
           <p>{spectating ? "等房主开始对局；有空座位时可以坐下一起玩。" : "把房间码分享给朋友；人没到齐也能开始，空座位由机器人补上。"}</p>
         </div>
         <div className="room-heading-actions">
+          {tutorial && !spectating && room.status === "waiting" && <div className="mj-room-tut">{tutorial}</div>}
           {isHost && <button className="quiet-button danger" type="button" onClick={onDissolve} disabled={busy}>解散房间</button>}
           <button className="quiet-button" type="button" onClick={onLeave} disabled={busy || (room.status === "playing" && !spectating)}>
             {spectating ? "离开观战" : "离开房间"}

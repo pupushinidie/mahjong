@@ -742,3 +742,43 @@ button.mj-tile:disabled { cursor: default; }
 .mj-screen.mobile .mj-round > span.mj-dora-top { display: inline-flex; }
 /* 听牌提示放在自己那栏右边，不被中间的操作条挡住 */
 .mj-screen:not(.mobile) .mj-mine-bar .mj-ting { margin-left: auto; }
+
+/* ---------- 新手教程 ---------- */
+.mj-home .welcome-copy .tut-invite { margin: 12px 0 0; }
+.mj-home .welcome-copy .tut-again { margin-top: 12px; align-self: flex-start; }
+/* 等候房间：宽屏放在标题和「离开房间」中间，窄屏换到标题下面一整行 */
+.mj-room .room-heading .mj-room-tut { flex: 0 1 520px; min-width: 0; }
+.mj-room .room-heading-actions:has(.mj-room-tut) { align-items: center; }
+.mj-room-tut .tut-invite { margin: 0; }
+@media (max-width: 899px) {
+  .mj-room .room-heading-actions { flex-wrap: wrap; }
+  .mj-room .room-heading .mj-room-tut { flex: 1 1 100%; order: 3; }
+}
+/* 「问咕噜嘎」挨着自己的名牌 */
+.app-shell :is(.mj-mine-bar, .mj-actions) .mj-ask { flex: none; width: auto; margin: 0; min-height: 0; padding: 4px 10px; border-color: var(--gold); font-size: 12px; }
+.app-shell :is(.mj-mine-bar, .mj-actions) .mj-ask small { margin-left: 6px; color: var(--muted); }
+.app-shell .mj-final-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 12px; }
+.app-shell .mj-final-actions .primary-button { width: auto; margin: 0; }
+/* 教程进度放在右栏：课名两列，不折行 */
+.mj-side .tut-checklist { padding: 10px 14px; }
+.mj-side .tut-checklist ul { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.mj-side .tut-checklist li { white-space: nowrap; }
+/* 小贴士：宽屏放到右栏下面（盖住动作记录），别盖住牌桌上的情况条 */
+@media (min-width: 1280px) {
+  .mj-screen .tut-toast { top: auto; bottom: 16px; right: 16px; left: auto; translate: none; transform: none; flex-wrap: wrap; width: 300px; }
+  .mj-screen .tut-toast p { flex: 1 1 180px; }
+  .mj-screen .tut-toast-actions { display: flex; justify-content: flex-end; align-items: center; gap: 12px; width: 100%; }
+}
+@media (min-width: 900px) and (max-height: 720px) {
+  /* 矮屏幕首页：邀请卡只留标题和按钮，主图别被挤出一屏 */
+  .mj-home .welcome-copy .tut-invite .tut-invite-copy span { display: none; }
+  .mj-home .welcome-copy .tut-invite { margin-top: 8px; }
+  /* 主图裁成上下各少一截（居中裁，不缩放），给邀请卡腾地方 */
+  .app-shell.mj-home .mj-hero { height: 224px; margin-top: 10px; }
+}
+/* 结算框内容太长时框里滚动，「下一盘 / 下一局」一直贴在框底 */
+.app-shell .gm-panel.mj-summary { overflow-y: auto; }
+.mj-summary footer { position: sticky; bottom: -18px; margin: 0 -20px -18px; padding: 10px 20px 18px; background: var(--panel); }
+/* 手机上整个结算框一起滚，每一笔的表别再缩成一条 */
+.mj-screen.mobile .mj-summary > * { flex: none; }
+.mj-screen.mobile .mj-sum-lines { max-height: none; overflow: visible; }

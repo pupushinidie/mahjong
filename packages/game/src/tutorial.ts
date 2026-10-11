@@ -139,6 +139,8 @@ export function createSichuanTutorial(selfName = "你"): SichuanState {
   let state = createSichuan(players, SICHUAN_SEED, { mode: "xuezhan", swap: true, cap: null, zimo: "fan", hands: 8 });
   state.players = players.map((player) => state.players.find((seated) => seated.id === player.id)!);
   state = stackSichuanHand(state, [...sc.wall], { dealer: 0 });
+  // 动作记录里别留着第一次（随机庄家）发牌的那条
+  state.history = [...state.events];
   sc.botSwaps.forEach((tiles, index) => {
     state = applyCommand(state, IDS[index + 1]!, { type: "SWAP", tiles }) as SichuanState;
   });
@@ -508,6 +510,7 @@ export function createRiichiTutorial(selfName = "你"): RiichiState {
   state.players = players.map((player) => state.players.find((seated) => seated.id === player.id)!);
   (state as { startDealer: number }).startDealer = 3;
   state = stackRiichiHand(state, [...rc1.tiles], { dealer: 3, roundWind: 0, roundIndex: 1, honba: 0, kyoutaku: 0 });
+  state.history = [...state.events];
   return state;
 }
 
