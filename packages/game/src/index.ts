@@ -82,3 +82,4 @@ export type {
   VoiceParticipant,
   VoiceSignal,
 } from "./roomTypes.js";
+export * from "./tutorial.js";
