@@ -10,6 +10,7 @@ import RoomChat from "./RoomChat.js";
 import { roomRole, RoomSettingsPanel, SeatSwitch } from "./RoomExtras.js";
 import { socket } from "./socket.js";
 import { ThemeToggle, useTheme } from "./theme.js";
+import { MusicToggle, useBgm, type BgmTrack } from "./bgm.js";
 import { TileView } from "./tiles.js";
 import { useVoice } from "./voice.js";
 import { TutorialInvite } from "./tutorial/Invite.js";
@@ -37,6 +38,12 @@ const VARIANT_BLURB: Record<string, string> = {
   riichi: "日本麻将：136 张带字牌和红五，能吃碰杠。要有役才能和，门清听牌可以立直；宝牌、振听、符和番，打一个半庄或东风战，按点数排名次。",
 };
 
+// 背景音乐：进了房间（等候房间、对局、观战）和新手教程里放，按玩法分两首；首页和房间列表不放。gain / start / end 是按曲子量的（见 bgm.tsx）。
+const BGM: Record<Variant, BgmTrack> = {
+  sichuan: { src: `${import.meta.env.BASE_URL}bgm/sichuan.mp3`, gain: 0.91, start: 1.55, end: 177.3 },
+  riichi: { src: `${import.meta.env.BASE_URL}bgm/riichi.mp3`, gain: 0.99, start: 0.05, end: 85.8 },
+};
+
 function App() {
   const [mode, setMode] = useState<EntryMode>("create");
   const [name, setName] = useState("");
@@ -49,7 +56,7 @@ function App() {
   const [confirmAction, confirmDialog] = useConfirm();
   // 白天 / 夜间画面：首页、等候房间、牌桌共用，顶栏按钮随时切换；和游戏中心、其他游戏共用同一个选择。
   const [theme, toggleTheme] = useTheme();
-  const themeToggle = <ThemeToggle theme={theme} onToggle={toggleTheme} />;
+  const themeToggle = <><ThemeToggle theme={theme} onToggle={toggleTheme} /><MusicToggle /></>;
   const [roomCode, setRoomCode] = useState("");
   const [room, setRoom] = useState<LobbyRoomSnapshot | null>(null);
   const [connected, setConnected] = useState(socket.connected);
@@ -66,6 +73,9 @@ function App() {
     const value = new URLSearchParams(window.location.search).get("tutorial");
     return value === null ? null : value === "riichi" ? "riichi" : "sichuan";
   });
+  // 教程开着时按教程的玩法放，否则按房间的玩法。
+  const musicVariant = tutorialOpen && room?.status !== "playing" ? tutorialOpen : room?.options.variant ?? null;
+  useBgm(musicVariant ? BGM[musicVariant] : null);
   function closeTutorial() {
     setTutorialOpen(null);
     const params = new URLSearchParams(window.location.search);

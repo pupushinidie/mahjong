@@ -751,6 +751,9 @@ button.mj-tile:disabled { cursor: default; }
 .mj-room .room-heading-actions:has(.mj-room-tut) { align-items: center; }
 .mj-room-tut .tut-invite { margin: 0; }
 @media (max-width: 899px) {
+  /* 按钮组（连同教程邀请）整行放到标题下面，宽度跟屏幕走；不然手机上按钮组按邀请条的原宽撑开，整页被撑到 850px */
+  .mj-room .room-heading:has(.mj-room-tut) { flex-wrap: wrap; }
+  .mj-room .room-heading-actions:has(.mj-room-tut) { flex: 1 1 100%; min-width: 0; justify-content: flex-end; }
   .mj-room .room-heading-actions { flex-wrap: wrap; }
   .mj-room .room-heading .mj-room-tut { flex: 1 1 100%; order: 3; }
 }
