@@ -262,7 +262,7 @@ function App() {
 
   if (tutorialOpen && room?.status !== "playing") {
     return (
-      <main className="app-shell mj-game">
+      <main data-gc-table className="app-shell mj-game">
         <TutorialMode key={tutorialOpen} variant={tutorialOpen} name={name} brand={<Brand />} themeToggle={themeToggle} theme={theme} waitingRoom={room?.code} onExit={closeTutorial} />
       </main>
     );
@@ -273,7 +273,7 @@ function App() {
     const watched = players.some((player) => player.id === watchId) ? watchId : players[0]!.id;
     const Board = room.game.variant === "riichi" ? RiichiBoard : GameBoard;
     return (
-      <main className="app-shell mj-game">
+      <main data-gc-table className="app-shell mj-game">
         <Board
           room={room}
           busy={busy}
