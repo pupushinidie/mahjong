@@ -10,7 +10,7 @@ import RoomChat from "./RoomChat.js";
 import { roomRole, RoomSettingsPanel, SeatSwitch } from "./RoomExtras.js";
 import { socket } from "./socket.js";
 import { ThemeToggle, useTheme } from "./theme.js";
-import { MusicToggle, useBgm, type BgmTrack } from "./bgm.js";
+import { SoundToggle, useBgm, type BgmTrack } from "./gm-sound.js";
 import { TileView } from "./tiles.js";
 import { useVoice } from "./voice.js";
 import { TutorialInvite } from "./tutorial/Invite.js";
@@ -56,7 +56,7 @@ function App() {
   const [confirmAction, confirmDialog] = useConfirm();
   // 白天 / 夜间画面：首页、等候房间、牌桌共用，顶栏按钮随时切换；和游戏中心、其他游戏共用同一个选择。
   const [theme, toggleTheme] = useTheme();
-  const themeToggle = <><ThemeToggle theme={theme} onToggle={toggleTheme} /><MusicToggle /></>;
+  const themeToggle = <><ThemeToggle theme={theme} onToggle={toggleTheme} /><SoundToggle /></>;
   const [roomCode, setRoomCode] = useState("");
   const [room, setRoom] = useState<LobbyRoomSnapshot | null>(null);
   const [connected, setConnected] = useState(socket.connected);
