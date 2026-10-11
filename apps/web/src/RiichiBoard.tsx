@@ -26,6 +26,8 @@ import { art, coverSize, seatColor } from "./art.js";
 import { useConfirm } from "./confirm.js";
 import GameRules from "./GameRules.js";
 import { GameRoomMenu, SpectateBar } from "./RoomExtras.js";
+import { useRiichiSfx } from "./game-sfx.js";
+import { useSfxCountdown } from "./gm-sound.js";
 import { socket } from "./socket.js";
 import { BAND, MOBILE_OPP_ROW, PLATE_W, useCountdown, useLayout } from "./table.js";
 import type { Theme } from "./theme.js";
@@ -349,6 +351,8 @@ function RiichiBoard({ room, busy, error, notice, brand, connection, theme, them
   });
 
   const needMe = !spectating && playing && (myMove || Boolean(myClaim));
+  useRiichiSfx(game, spectating ? -1 : mySeat);
+  useSfxCountdown(needMe && !me.auto, secondsLeft);
 
   // 「问咕噜嘎」：只有自己和人机时（练习局，或者一个人开的房间，空座都是人机）
   const botsOnly = room.members.length === 1 && member !== undefined;
@@ -597,6 +601,7 @@ function RiichiBoard({ room, busy, error, notice, brand, connection, theme, them
         onPointerLeave={canPick ? () => setHoverTile(null) : undefined}
         badge={selected === tile ? (riichiMode ? "再点立直" : "再点打出") : ting ? "听" : undefined}
         anchor={`tile:${tile}`}
+        sfx={canPick && selected !== tile ? "select" : !canPick && myMove ? "deny" : undefined}
       />
     );
   };
@@ -631,7 +636,7 @@ function RiichiBoard({ room, busy, error, notice, brand, connection, theme, them
           {askButton}
           {tsumoOk && <button className="primary-button mj-hu" type="button" disabled={busy} onClick={() => send({ type: "TSUMO" })} data-tutorial="btn-tsumo">自摸<small>H</small></button>}
           {riichiTiles.length > 0 && (
-            <button className={riichiMode ? "primary-button mj-riichi-button on" : "primary-button mj-riichi-button"} type="button" disabled={busy} onClick={() => { setRiichiMode(!riichiMode); setSelected(null); }} data-tutorial="btn-riichi">
+            <button className={riichiMode ? "primary-button mj-riichi-button on" : "primary-button mj-riichi-button"} type="button" disabled={busy} onClick={() => { setRiichiMode(!riichiMode); setSelected(null); }} data-tutorial="btn-riichi" data-sfx="select">
               {riichiMode ? "不立直了" : "立直"}<small>R</small>
             </button>
           )}

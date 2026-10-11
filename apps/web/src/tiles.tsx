@@ -53,10 +53,12 @@ interface TileProps {
   readonly style?: CSSProperties | undefined;
   /** 新手教程的高亮锚点（data-tutorial）。 */
   readonly anchor?: string | undefined;
+  /** 按下时的音效（gm-sound 的 data-sfx）：select 选中、deny 不能点；不传就是按钮的普通轻点、不能点的牌不出声。 */
+  readonly sfx?: string | undefined;
 }
 
 /** 一张牌。能点的是 button，其他是 span。 */
-export function TileView({ tile, scale, redFives, sideways, className, onClick, onPointerEnter, onPointerLeave, disabled, title, badge, style, anchor }: TileProps) {
+export function TileView({ tile, scale, redFives, sideways, className, onClick, onPointerEnter, onPointerLeave, disabled, title, badge, style, anchor, sfx }: TileProps) {
   const sprite = <span className="mj-sprite" style={spriteStyle(spriteIndex(tile, redFives), scale)} />;
   const classes = ["mj-tile", sideways ? "sideways" : "", tile === null || tile < 0 ? "back" : "", className ?? ""].join(" ");
   const box: CSSProperties = sideways
@@ -71,13 +73,13 @@ export function TileView({ tile, scale, redFives, sideways, className, onClick, 
   );
   if (onClick) {
     return (
-      <button type="button" className={classes} style={box} onClick={onClick} disabled={disabled} title={label} aria-label={label} onPointerEnter={onPointerEnter} onPointerLeave={onPointerLeave} data-tutorial={anchor}>
+      <button type="button" className={classes} style={box} onClick={onClick} disabled={disabled} title={label} aria-label={label} onPointerEnter={onPointerEnter} onPointerLeave={onPointerLeave} data-tutorial={anchor} data-sfx={sfx}>
         {inner}
       </button>
     );
   }
   return (
-    <span className={classes} style={box} title={label} aria-label={label} role="img" onPointerEnter={onPointerEnter} onPointerLeave={onPointerLeave} data-tutorial={anchor}>
+    <span className={classes} style={box} title={label} aria-label={label} role="img" onPointerEnter={onPointerEnter} onPointerLeave={onPointerLeave} data-tutorial={anchor} data-sfx={sfx}>
       {inner}
     </span>
   );

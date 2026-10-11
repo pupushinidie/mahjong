@@ -27,6 +27,8 @@ import { art, coverSize, seatColor } from "./art.js";
 import { useConfirm } from "./confirm.js";
 import GameRules from "./GameRules.js";
 import { GameRoomMenu, SpectateBar } from "./RoomExtras.js";
+import { useSichuanSfx } from "./game-sfx.js";
+import { useSfxCountdown } from "./gm-sound.js";
 import { socket } from "./socket.js";
 import { BAND, MOBILE_OPP_ROW, PLATE_W, useCountdown, useLayout } from "./table.js";
 import { kindLabel, ROW_PITCH, TILE_H, TILE_W, tileLabel, TileView } from "./tiles.js";
@@ -292,6 +294,8 @@ function GameBoard({ room, busy, error, notice, brand, connection, theme, themeT
 
   // 在后台时标题提示轮到你
   const needMe = !spectating && playing && (myMove || Boolean(myClaim) || (stage === "swap" && !me.swapChosen) || (stage === "void" && !me.voidChosen));
+  useSichuanSfx(game, spectating ? -1 : mySeat);
+  useSfxCountdown(needMe && !me.auto, secondsLeft);
 
   // 「问咕噜嘎」：只有自己和人机时（练习局，或者一个人开的房间，空座都是人机）
   const botsOnly = room.members.length === 1 && member !== undefined;
@@ -578,6 +582,7 @@ function GameBoard({ room, busy, error, notice, brand, connection, theme, themeT
         onPointerLeave={canDiscard ? () => setHoverTile(null) : undefined}
         badge={swapMode && picked ? "换" : selected === tile ? "再点打出" : ting && ting.kinds.length > 0 ? "听" : undefined}
         anchor={`tile:${tile}`}
+        sfx={swapMode || (canDiscard && selected !== tile) ? "select" : !canDiscard && myMove ? "deny" : undefined}
       />
     );
   };
@@ -607,6 +612,7 @@ function GameBoard({ room, busy, error, notice, brand, connection, theme, themeT
               aria-pressed={voidPick === suit}
               disabled={busy}
               onClick={() => setVoidPick(suit)}
+              data-sfx="select"
               style={{ "--suit": SUIT_COLOR[suit] } as CSSProperties}
               data-tutorial={`btn-void-${suit}`}
             >
