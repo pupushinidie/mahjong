@@ -8,6 +8,22 @@
  * 牌是 tiles.png 图集（20×32，见 art/tiles.py），只按整数倍放大：牌河和副露 --s 倍，自己手牌 --hs 倍。
  */
 
+/* ---------- 背景：茶馆 / 雀庄场景铺满窗口（首页、等候房间、牌桌、教程、观战都有），面板都叠在它上面 ---------- */
+.mj-backdrop { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; background: #1a1008; }
+.mj-backdrop-art {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max(100vw, calc(100vh * 16 / 9));
+  height: max(100vh, calc(100vw * 9 / 16));
+  transform: translate(-50%, -50%);
+  background-size: 100% 100%;
+  image-rendering: pixelated;
+}
+.mj-backdrop-veil { position: absolute; inset: 0; background: #04060c; opacity: 0.4; }
+/* 其余子元素都压在背景上面；用 :where 不抬高优先级，弹窗、教程的 position: fixed 不受影响 */
+:where(.app-shell.mj-home, .app-shell.mj-room, .app-shell.mj-game) > :where(:not(.mj-backdrop)) { position: relative; z-index: 1; }
+
 .mj-screen img, .mj-sprite { image-rendering: pixelated; }
 
 .mj-panel, .mj-plate, .mj-center, .mj-summary, .mj-final, .mj-banner, .mj-auto-banner, .mj-chip {
@@ -88,7 +104,7 @@ button.mj-tile:disabled { cursor: default; }
 /* ---------- 整屏 ---------- */
 .app-shell.mj-game { width: 100%; max-width: none; min-height: 0; margin: 0; padding: 0; }
 .mj-screen { display: flex; height: 100vh; height: 100dvh; flex-direction: column; gap: 10px; padding: 0 12px 12px; box-sizing: border-box; overflow: hidden; }
-.mj-topbar { display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between; gap: 14px; height: 52px; padding: 0 2px; border-bottom: var(--px) solid var(--rim); white-space: nowrap; }
+.mj-topbar { display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between; gap: 14px; height: 52px; margin: 0 -12px; padding: 0 14px; background: var(--panel); border-bottom: var(--px) solid var(--rim); white-space: nowrap; }
 .mj-topbar .brand { flex: 0 0 auto; }
 .mj-round { display: flex; flex: 1; align-items: center; justify-content: center; gap: 16px; min-width: 0; overflow: hidden; color: var(--muted); font-size: 12px; }
 .mj-round b { color: var(--text); font-size: 24px; font-weight: 400; }
@@ -396,13 +412,6 @@ button.mj-tile:disabled { cursor: default; }
  * 桌面端：左边标题、介绍、主图（512px 原尺寸），右边「进入牌桌」和在线牌桌；页面高度正好是可视区域。
  * 手机：标题和介绍 → 进入牌桌 → 主图 → 在线牌桌。
  */
-.app-shell .mj-hero {
-  display: block;
-  width: 512px;
-  max-width: none;
-  margin-top: 20px;
-  box-shadow: 0 0 0 var(--px) var(--edge), 0 0 0 calc(var(--px) * 2) var(--rim), 0 0 0 calc(var(--px) * 3) var(--edge);
-}
 .app-shell .mj-showcase { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; margin-top: 16px; }
 .app-shell .mj-showcase .mj-card { --cw: 96px; flex: 0 0 96px; }
 .app-shell .mj-mode-pick { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -416,7 +425,9 @@ button.mj-tile:disabled { cursor: default; }
 
 .app-shell.mj-home { width: min(1200px, calc(100% - 48px)); }
 .mj-home .welcome-grid { grid-template-columns: minmax(512px, 1fr) 420px; grid-template-rows: minmax(0, 1fr); align-items: center; gap: 48px; padding: 24px 0; }
-.mj-home .welcome-copy { padding: 0; }
+.mj-home .welcome-copy { padding: 16px 20px 20px; background: var(--panel); box-shadow: 0 0 0 var(--px) var(--edge), inset var(--px) var(--px) 0 0 var(--rim), inset calc(var(--px) * -1) calc(var(--px) * -1) 0 0 var(--shade); }
+.app-shell.mj-home .welcome-copy h1 { margin: 12px 0 14px; font-size: 60px; }
+.app-shell.mj-home .online-rooms { padding: 12px 16px 14px; background: var(--panel); box-shadow: 0 0 0 var(--px) var(--edge), inset var(--px) var(--px) 0 0 var(--rim), inset calc(var(--px) * -1) calc(var(--px) * -1) 0 0 var(--shade); }
 .mj-home-side { display: flex; max-height: 100%; min-width: 0; min-height: 0; flex-direction: column; gap: 16px; }
 .mj-home-side .entry-card { flex: 0 0 auto; }
 .app-shell.mj-home .online-rooms { display: flex; min-height: 0; flex: 0 1 auto; flex-direction: column; margin: 0; padding: 0; border-top: 0; }
@@ -456,7 +467,6 @@ button.mj-tile:disabled { cursor: default; }
   .mj-home .welcome-copy > * { order: 1; }
   .mj-home .mj-home-side { display: contents; }
   .mj-home .entry-card { order: 2; }
-  .app-shell.mj-home .mj-hero { order: 3; width: 100%; max-width: 512px; margin: 0 auto; }
   .mj-home .mj-showcase { order: 4; }
   .mj-home .online-rooms { order: 5; }
   .app-shell.mj-home .welcome-copy h1 { margin: 0; }
@@ -465,16 +475,13 @@ button.mj-tile:disabled { cursor: default; }
   .mj-home .topbar { height: 56px; }
   .app-shell.mj-home .mode-switch { margin-top: 8px; }
 }
-@media (max-width: 559px) {
-  .app-shell.mj-home .mj-hero { width: 256px; }
-}
 
 /* ---------- 等候房间：一屏放下 ----------
  * 桌面端：顶栏 + 标题一行 + 三列（房间码、玩家、聊天）；6 人以上的房间玩家名单分两列。
  */
 .app-shell.mj-room { width: min(1440px, calc(100% - 48px)); }
 .mj-room .room-layout { display: flex; width: 100%; min-height: 0; flex-direction: column; padding: 24px 0 16px; }
-.mj-room .room-heading { margin-bottom: 20px; }
+.mj-room .room-heading { margin-bottom: 20px; padding: 10px 16px 14px; background: var(--panel); box-shadow: 0 0 0 var(--px) var(--edge), inset var(--px) var(--px) 0 0 var(--rim), inset calc(var(--px) * -1) calc(var(--px) * -1) 0 0 var(--shade); }
 .mj-room .room-heading h1 { margin-top: 8px; }
 .mj-room .room-grid { grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr) minmax(0, 1fr); gap: 16px; align-items: start; }
 .mj-room .player-details strong { font-size: 24px; line-height: 1.25; }
@@ -663,20 +670,9 @@ button.mj-tile:disabled { cursor: default; }
 .mj-plate-wrap .mj-plate-tags:empty { display: none; }
 .mj-seat.s1 .mj-wins-count, .mj-seat.s3 .mj-wins-count { display: none; }
 .mj-screen.mobile .mj-plate-wrap .mj-avatar { display: none; }
-.app-shell .mj-hero {
-  position: relative;
-  width: 512px;
-  height: 288px;
-  margin-top: 16px;
-  background: center / 512px 288px no-repeat;
-  image-rendering: pixelated;
-  box-shadow: 0 0 0 var(--px) var(--edge), 0 0 0 calc(var(--px) * 2) var(--rim), 0 0 0 calc(var(--px) * 3) var(--edge);
-}
-.app-shell .mj-hero .mj-showcase { position: absolute; left: 16px; bottom: 12px; margin: 0; gap: 4px; }
 .app-shell .mj-variants { grid-template-columns: 1fr 1fr; }
 @media (max-width: 899px) {
   .app-shell .mj-variants { grid-template-columns: 1fr; }
-  .app-shell .mj-hero { width: 100%; max-width: 512px; background-size: cover; }
 }
 
 /* 定缺：选中的那一门 */
@@ -776,8 +772,6 @@ button.mj-tile:disabled { cursor: default; }
   /* 矮屏幕首页：邀请卡只留标题和按钮，主图别被挤出一屏 */
   .mj-home .welcome-copy .tut-invite .tut-invite-copy span { display: none; }
   .mj-home .welcome-copy .tut-invite { margin-top: 8px; }
-  /* 主图裁成上下各少一截（居中裁，不缩放），给邀请卡腾地方 */
-  .app-shell.mj-home .mj-hero { height: 224px; margin-top: 10px; }
 }
 /* 结算框内容太长时框里滚动，「下一盘 / 下一局」一直贴在框底 */
 .app-shell .gm-panel.mj-summary { overflow-y: auto; }

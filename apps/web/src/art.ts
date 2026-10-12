@@ -15,6 +15,12 @@ export const art = {
   riichiAvatar: (index: number) => `${BASE}riichi-avatar-${index % 4}.png`,
 };
 
+/** 铺满窗口的场景背景（art/bg/ 下，512×288，和牌桌场景同一张）：按玩法、按白天夜间选。 */
+export const bgArt = {
+  sichuan: { night: `${BASE}bg/sichuan-night.png`, day: `${BASE}bg/sichuan-day.png` },
+  riichi: { night: `${BASE}bg/riichi-night.png`, day: `${BASE}bg/riichi-day.png` },
+} as const;
+
 /** 座位色：自己、下家、对家、上家。 */
 export const SEAT_COLORS = ["#f0b53a", "#3f8fe8", "#ef6b57", "#47b968"] as const;
 

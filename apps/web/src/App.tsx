@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type CSSProperties, type FormEvent, type ReactNode, useRef } from "react";
 import { DEFAULT_RIICHI_OPTIONS, DEFAULT_SICHUAN_OPTIONS, SEAT_COUNT, VARIANTS, type GameCommand, type GameOptions, type LobbyRoomSnapshot, type PublicRoomSummary, type Tile, type Variant } from "@mahjong/game";
-import { art, seatColor } from "./art.js";
+import { art, bgArt, seatColor } from "./art.js";
 import { useConfirm } from "./confirm.js";
 import GameBoard from "./GameBoard.js";
 import GameRules from "./GameRules.js";
@@ -9,7 +9,7 @@ import OnlineRooms from "./OnlineRooms.js";
 import RoomChat from "./RoomChat.js";
 import { roomRole, RoomSettingsPanel, SeatSwitch } from "./RoomExtras.js";
 import { socket } from "./socket.js";
-import { ThemeToggle, useTheme } from "./theme.js";
+import { ThemeToggle, useTheme, type Theme } from "./theme.js";
 import { useRoomSfx, sfx, SoundToggle, useBgm, type BgmTrack } from "./gm-sound.js";
 import { TileView } from "./tiles.js";
 import { useVoice } from "./voice.js";
@@ -282,6 +282,7 @@ function App() {
   if (tutorialOpen && room?.status !== "playing") {
     return (
       <main data-gc-table className="app-shell mj-game">
+        <MjBackdrop variant={tutorialOpen} theme={theme} />
         <TutorialMode key={tutorialOpen} variant={tutorialOpen} name={name} brand={<Brand />} themeToggle={themeToggle} theme={theme} waitingRoom={room?.code} onExit={closeTutorial} />
       </main>
     );
@@ -293,6 +294,7 @@ function App() {
     const Board = room.game.variant === "riichi" ? RiichiBoard : GameBoard;
     return (
       <main data-gc-table className="app-shell mj-game">
+        <MjBackdrop variant={room.game.variant} theme={theme} />
         <Board
           room={room}
           busy={busy}
@@ -318,6 +320,7 @@ function App() {
   if (room) {
     return (
       <main className="app-shell mj-room">
+        <MjBackdrop variant={room.options.variant} theme={theme} />
         <header className="topbar">
           <Brand />
           <div className="topbar-right">
@@ -354,6 +357,7 @@ function App() {
 
   return (
     <main className="app-shell mj-home">
+      <MjBackdrop variant={variant} theme={theme} />
       <header className="topbar">
         <Brand />
         <div className="topbar-right">
@@ -395,10 +399,8 @@ function App() {
             again={`再看一遍${variant === "riichi" ? "立直" : "四川"}新手教程`}
             onOpen={() => setTutorialOpen(variant)}
           />
-          <div className="mj-hero" style={{ backgroundImage: `url(${variant === "riichi" ? (theme === "day" ? art.riichiDay : art.riichiNight) : theme === "day" ? art.sceneDay : art.sceneNight})` }}>
-            <div className="mj-showcase" aria-hidden="true">
-              {SHOWCASE.map((tile) => <TileView key={tile} tile={tile} scale={2} />)}
-            </div>
+          <div className="mj-showcase" aria-hidden="true">
+            {SHOWCASE.map((tile) => <TileView key={tile} tile={tile} scale={2} />)}
           </div>
         </div>
 
@@ -520,6 +522,17 @@ function App() {
         </div>
       </section>
     </main>
+  );
+}
+
+/** 铺满窗口的场景背景：四川是茶馆、立直是雀庄，按白天 / 夜间换图；上面盖一层罩色，面板都叠在它上面。 */
+function MjBackdrop({ variant, theme }: { variant: Variant; theme: Theme }) {
+  const scene = bgArt[variant][theme];
+  return (
+    <div className="mj-backdrop" aria-hidden="true">
+      <div className="mj-backdrop-art" style={{ backgroundImage: `url(${scene})` }} />
+      <div className="mj-backdrop-veil" />
+    </div>
   );
 }
 

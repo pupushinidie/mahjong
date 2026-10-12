@@ -16,3 +16,7 @@
 }
 :root[data-theme="day"] .mj-plate.active { background: #3a2c10; }
 :root[data-theme="day"] .mj-table { --veil: rgba(40, 24, 8, 0.18); }
+
+/* 铺满窗口的场景背景：白天版底色换浅色，罩色换成淡白 */
+:root[data-theme="day"] .mj-backdrop { background: #eadfc8; }
+:root[data-theme="day"] .mj-backdrop-veil { background: #ffffff; opacity: 0.22; }
